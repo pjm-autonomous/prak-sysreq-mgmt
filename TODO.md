@@ -1,6 +1,36 @@
 # TODO
 
+prak-sysreq-mgmt **In-Progress: tooling complete, decomposition not started**
+
 Owner: Patrick McKee, serving as SE for both VSP-Embedded and Electronics.
+Last updated 2026-08-18.
+
+## Where this stands
+
+The generator, both DAGs, the published site, and the agendas are done. What is
+outstanding is **data**, not code: 102 epics are loaded and grouped, but none has
+been through an evaluation meeting.
+
+| | Embedded-Core | Electronics |
+|---|---:|---:|
+| Epics | 87 | 15 |
+| Capabilities | 9 | 4 |
+| Evaluated (`2TS Required` set) | 0 | 0 |
+| Dependencies recorded | 0 | 9, all provisional |
+| Tracker | live | live |
+
+Published: https://pjm-autonomous.github.io/prak-sysreq-mgmt/ (rebuilds on push).
+
+### Next session
+
+1. Run the first Electronics evaluation meeting, or confirm the 9 provisional
+   `[guess]` dependencies, whichever comes first.
+2. After any meeting: export the sheet to CSV, then
+   `python3 tools/build_dependency_dag.py --team <t> --csv <export>` and
+   `python3 tools/build_index.py`, commit, push. The site updates itself.
+3. If IT ticket #help00004986 has landed, set `SMARTSHEET_ACCESS_TOKEN` and
+   switch to `--live`; then `gh auth refresh -s workflow` and commit
+   `.github/workflows/refresh-dag.yml` to automate the whole loop.
 
 ## Electronics Epic Dependency DAG
 
@@ -125,6 +155,23 @@ the tracker refresh.
 So DAGs are published as pages today, not only as artifacts. What is manual until
 the Smartsheet token arrives is the *refresh*: export CSV, regenerate, commit,
 push - and the site updates itself from there.
+
+## Session log
+
+### 2026-08-18
+
+- Built the generator, both DAGs, the two-level capability drill-down viewer,
+  the published landing page, the agendas, and `tools/teams.py`.
+- Tracker grouping column renamed `Initiative` -> `Capability`; all 87 Embedded
+  rows populated with capreq slugs, closing the 40-row unmapped gap.
+- Electronics tracker created and wired in; 15 epics, Jira keys `ET-2951`..`-2965`.
+- Two generator defects found and fixed, both silent: `Blocking Epics` entries
+  were split on commas inside qualifiers (would have shown 0 edges for all 9
+  Electronics dependencies), and unresolvable refs were dropped rather than
+  drawn (made cross-team dependencies invisible).
+- One wrong finding recorded and corrected: "Electronics epics do not exist in
+  Jira" came from a JQL scoped to `project = MCHTRNCS`; they are in `ET`.
+- GitHub Pages enabled and verified live.
 
 ## Repo hygiene
 
