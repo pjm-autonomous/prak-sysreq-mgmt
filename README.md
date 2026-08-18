@@ -15,7 +15,7 @@ reflects current sheet state.
 ### Files
 
 | File | What it is |
-|------|------------|
+| ------ | ------------ |
 | `dependency-dag.mmd` | Mermaid source, current sheet state (paste into Jama / GitHub / [mermaid.live](https://mermaid.live)) |
 | `dependency-dag.html` | Viewer — open in a browser. Loads mermaid from `vendor/`, so no network needed |
 | `dependency-dag.example.*` | **Illustrative** render with sample edges, to show how a populated DAG looks (not real dependencies) |
@@ -57,7 +57,7 @@ list the epics that must progress first, comma/newline/semicolon separated;
 each token is an epic id (`epic-<slug>`) or a Jira key (`MCHTRNCS-###`),
 optionally tagged `(hard)` or `(soft)`:
 
-```
+```text
 epic-subscribe-all-stop-broadcaster (hard), MCHTRNCS-220 (soft)
 ```
 
@@ -108,7 +108,7 @@ search scoped to `MCHTRNCS` will not find them.
 15 epics across 4 of the 9 capabilities:
 
 | Capability | Epics | Priority mix |
-|------------|-------|--------------|
+| ------------ | ------- | -------------- |
 | CAP-01 Motion Authorization | 5 | 3 Must, 2 Should |
 | CAP-03 Path Execution and Objectives Translation | 2 | 2 Should |
 | CAP-08 Tele-operation | 7 | 4 Must, 3 Should |
@@ -120,7 +120,7 @@ Edges come from the **Blocking Epics** column — `(hard)` solid, `(soft)` dashe
 untagged defaults to hard. An entry may carry a comma-separated qualifier list
 and a provisional marker:
 
-```
+```text
 epic-validate-supplied-path (Embedded, soft) [guess]
 epic-publish-motion-authorization-state (ET-2952, soft) [guess]
 ```
@@ -157,7 +157,7 @@ URL, title, or output path is stated exactly once and every generator reads the
 same entry. Adding a third team means adding one entry there.
 
 | Team | Preset | Sheet id | Jira |
-|------|--------|----------|------|
+| ------ | -------- | ---------- | ------ |
 | Embedded-Core | `--team embedded` | `8066207570677636` | project `MCHTRNCS`, VSP-Embedded |
 | Electronics | `--team electronics` | `5660443916849028` | project `ET`, Electrical Platform |
 
@@ -192,7 +192,7 @@ UMD) so no page depends on a CDN at view time. The generator's `--mermaid` flag
 selects how it is loaded:
 
 | Mode | Behaviour |
-|------|-----------|
+| ------ | ----------- |
 | `auto` (default) | `vendor` when the bundle exists, else `cdn` |
 | `vendor` | Reference the committed bundle by relative path. No CDN, no per-file weight. |
 | `inline` | Embed the bundle for a single portable file. Adds ~3.5 MB per output. |
@@ -228,7 +228,7 @@ One standing agenda per team, in
 [`agile-planning/meeting-agenda/`](agile-planning/meeting-agenda/):
 
 | File | Meeting |
-|------|---------|
+| ------ | --------- |
 | `standingagenda-embedded.*` | Embedded-Core, 87 epics, ~10 per session |
 | `standingagenda-electronics.*` | Electronics, 15 epics, ~8 per session, roles still TBD |
 
