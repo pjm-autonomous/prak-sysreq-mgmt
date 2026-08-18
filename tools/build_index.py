@@ -26,6 +26,7 @@ import html
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
@@ -33,6 +34,9 @@ import teams as team_registry  # noqa: E402
 
 ROOT = team_registry.ROOT
 JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
+# Repo blob base, so the "how this is built" links render as markdown on
+# github.com instead of being served raw by GitHub Pages.
+REPO_BLOB = "https://github.com/pjm-autonomous/prak-sysreq-mgmt/blob/main/"
 
 # Teams come from tools/teams.py so a sheet url or output path is defined once.
 # The per-team paths a DAG produces are derived from that entry's outdir.
@@ -77,9 +81,25 @@ def with_dependencies(rows: list[dict]) -> int:
     return sum(1 for r in rows if r["Blocking Epics"].strip())
 
 
+def provisional(rows: list[dict]) -> int:
+    """Of the recorded dependencies, how many are still marked [guess] - a
+    working assumption from before an evaluation meeting, not a confirmed edge.
+    The DAG viewer labels these 'guess'; the landing page must not present them
+    as settled."""
+    return sum(1 for r in rows
+               if r["Blocking Epics"].strip() and "[guess]" in r["Blocking Epics"])
+
+
 def team_card(team: dict, rows: list[dict]) -> str:
     total = len(rows)
     ev, dep = evaluated(rows), with_dependencies(rows)
+    prov = provisional(rows)
+    dep_caveat = ""
+    if prov:
+        which = "all provisional" if prov == dep else f"{prov} provisional"
+        dep_caveat = (' <span class="muted" title="Marked [guess] in the tracker: '
+                      'a working assumption, not yet confirmed in an evaluation '
+                      f'meeting.">&middot; {which}</span>')
     n_caps = len({r["Capability"].strip() for r in rows if r["Capability"].strip()})
     tracker = (f'<a href="{esc(team["tracker"])}" target="_blank" '
                f'rel="noopener">Smartsheet tracker &#8599;</a>'
@@ -89,7 +109,7 @@ def team_card(team: dict, rows: list[dict]) -> str:
     <p class="muted">{esc(team["jira"])} &middot; {total} epics across {n_caps} capabilities</p>
     <dl class="progress">
       <div><dt>Epics evaluated</dt><dd>{ev} / {total} <span class="muted">({pct(ev, total)}%)</span></dd></div>
-      <div><dt>Dependencies recorded</dt><dd>{dep} / {total} <span class="muted">({pct(dep, total)}%)</span></dd></div>
+      <div><dt>Dependencies recorded</dt><dd>{dep} / {total} <span class="muted">({pct(dep, total)}%)</span>{dep_caveat}</dd></div>
     </dl>
     <p class="links">
       <a class="primary" href="{esc(team["dag"])}">Open the dependency DAG &rarr;</a>
@@ -176,6 +196,10 @@ TEMPLATE = """<!doctype html>
 </header>
 
 <h2>Teams</h2>
+<p class="muted"><b>Evaluated</b> &mdash; the epic has been through an evaluation
+meeting, so its 2TS need is decided. <b>Dependencies recorded</b> &mdash; its
+blocking epics have been captured in the tracker; <i>provisional</i> ones are
+recorded but still marked a guess, not yet confirmed in a meeting.</p>
 <div class="teams">
 __CARDS__
 </div>
@@ -199,12 +223,13 @@ __CAP_ROWS__
 <p class="muted">Nothing here is hand-drawn. <code>tools/build_dependency_dag.py</code>
 reads a tracker &mdash; live over the Smartsheet API, or from a CSV export &mdash; and
 re-emits the diagram and viewer. Re-run it and the pages reflect current state.
-See <a href="README.md">README.md</a> for the commands and
-<a href="TODO.md">TODO.md</a> for what is still open.</p>
+See <a href="__BLOB__README.md">README.md</a> for the commands,
+<a href="__BLOB__PUBLISHING.md">PUBLISHING.md</a> for how the pages are released,
+and <a href="__BLOB__TODO.md">TODO.md</a> for what is still open.</p>
 
 <footer>
-  Counted from <code>data/tracker-snapshot*.csv</code>. Rebuild this page with
-  <code>python3 tools/build_index.py</code>.
+  Updated __UPDATED__ &middot; counted from <code>data/tracker-snapshot*.csv</code>.
+  Rebuild this page with <code>python3 tools/build_index.py</code>.
 </footer>
 </body></html>
 """
@@ -222,7 +247,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default=os.path.join(ROOT, "index.html"))
+    ap.add_argument("--timestamp", default="",
+                    help="override the 'Updated' stamp (default: today, UTC)")
     args = ap.parse_args()
+    updated = args.timestamp or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     meta = load_json(os.path.join(ROOT, "data", "capability-meta.json"))
     cap_jira = load_json(os.path.join(ROOT, "data", "capability-jira.json"))
@@ -253,7 +281,9 @@ def main() -> None:
                     "".join(f'<th class="num">{esc(n)}</th>' for n in names))
            .replace("__TEAM_TOTALS__",
                     "".join(f'<th class="num">{t}</th>' for t in totals))
-           .replace("__CAP_ROWS__", capability_rows(per_team, meta, cap_jira)))
+           .replace("__CAP_ROWS__", capability_rows(per_team, meta, cap_jira))
+           .replace("__BLOB__", REPO_BLOB)
+           .replace("__UPDATED__", esc(updated)))
 
     with open(args.out, "w", encoding="utf-8") as fh:
         fh.write(out)

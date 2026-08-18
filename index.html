@@ -56,6 +56,10 @@
 </header>
 
 <h2>Teams</h2>
+<p class="muted"><b>Evaluated</b> &mdash; the epic has been through an evaluation
+meeting, so its 2TS need is decided. <b>Dependencies recorded</b> &mdash; its
+blocking epics have been captured in the tracker; <i>provisional</i> ones are
+recorded but still marked a guess, not yet confirmed in a meeting.</p>
 <div class="teams">
   <section class="team">
     <h3>Embedded-Core</h3>
@@ -76,7 +80,7 @@
     <p class="muted">Electrical Platform, project ET &middot; 15 epics across 4 capabilities</p>
     <dl class="progress">
       <div><dt>Epics evaluated</dt><dd>0 / 15 <span class="muted">(0%)</span></dd></div>
-      <div><dt>Dependencies recorded</dt><dd>9 / 15 <span class="muted">(60%)</span></dd></div>
+      <div><dt>Dependencies recorded</dt><dd>9 / 15 <span class="muted">(60%)</span> <span class="muted" title="Marked [guess] in the tracker: a working assumption, not yet confirmed in an evaluation meeting.">&middot; all provisional</span></dd></div>
     </dl>
     <p class="links">
       <a class="primary" href="agile-planning/dependency-dag-electronics/dependency-dag.html">Open the dependency DAG &rarr;</a>
@@ -114,11 +118,12 @@ the only layer the two trackers share &mdash; no epic appears in both.</p>
 <p class="muted">Nothing here is hand-drawn. <code>tools/build_dependency_dag.py</code>
 reads a tracker &mdash; live over the Smartsheet API, or from a CSV export &mdash; and
 re-emits the diagram and viewer. Re-run it and the pages reflect current state.
-See <a href="README.md">README.md</a> for the commands and
-<a href="TODO.md">TODO.md</a> for what is still open.</p>
+See <a href="https://github.com/pjm-autonomous/prak-sysreq-mgmt/blob/main/README.md">README.md</a> for the commands,
+<a href="https://github.com/pjm-autonomous/prak-sysreq-mgmt/blob/main/PUBLISHING.md">PUBLISHING.md</a> for how the pages are released,
+and <a href="https://github.com/pjm-autonomous/prak-sysreq-mgmt/blob/main/TODO.md">TODO.md</a> for what is still open.</p>
 
 <footer>
-  Counted from <code>data/tracker-snapshot*.csv</code>. Rebuild this page with
-  <code>python3 tools/build_index.py</code>.
+  Updated 2026-08-18 &middot; counted from <code>data/tracker-snapshot*.csv</code>.
+  Rebuild this page with <code>python3 tools/build_index.py</code>.
 </footer>
 </body></html>

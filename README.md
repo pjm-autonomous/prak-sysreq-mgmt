@@ -214,6 +214,12 @@ selects how it is loaded:
 3.5 MB out of every regenerated HTML, which matters since these files rebuild
 after every meeting and would otherwise churn git history.
 
+For the full release workflow across all three surfaces - the Pages site, a
+self-contained single file to email or share, and a claude.ai Artifact - see
+[PUBLISHING.md](PUBLISHING.md). The short version: anything that leaves the site
+must be built with `--mermaid inline`, or its graph renders blank once the sibling
+bundle and the CDN are both out of reach.
+
 ## Automated refresh
 
 `.github/workflows/refresh-dag.yml` runs 07:00 UTC on weekdays, and on demand
