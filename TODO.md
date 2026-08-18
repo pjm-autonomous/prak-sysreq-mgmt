@@ -89,6 +89,43 @@ for context and excluded from the referencing team's counts.
       ...) and this repo is public. `tools/export_snapshot.py` writes exactly
       those 7 from the live sheet.
 
+## Blocked on access
+
+- [ ] **Smartsheet API token.** Patrick's permission level excludes API keys; an
+      IT help request was submitted 2026-08-18. Until it lands, `--live` and
+      `tools/export_snapshot.py` cannot run, and the scheduled refresh workflow
+      cannot work even once it is committed.
+      **Working path meanwhile:** in Smartsheet, File > Export > Export to CSV,
+      then rebuild from the export:
+      ```bash
+      python3 tools/build_dependency_dag.py --team electronics --csv path/to/export.csv
+      python3 tools/build_index.py
+      ```
+      Committing the refreshed `data/tracker-snapshot*.csv` keeps the published
+      site current, since Pages rebuilds on every push.
+      Ask IT for: a Smartsheet API access token (Personal Settings > API Access)
+      with read on sheets `8066207570677636` and `5660443916849028`.
+- [ ] **GitHub Actions workflow creation.** The current OAuth token has scopes
+      `gist`, `read:org`, `repo` and lacks `workflow`, so
+      `.github/workflows/refresh-dag.yml` cannot be pushed. It is written and
+      sitting untracked. Fix with `gh auth refresh -s workflow`, then commit that
+      one file. Blocked behind the Smartsheet token regardless - the workflow
+      needs `SMARTSHEET_ACCESS_TOKEN` as a repo secret to do anything.
+
+## Publishing
+
+**GitHub Pages is live: https://pjm-autonomous.github.io/prak-sysreq-mgmt/**
+
+It does not depend on a workflow. The site is `build_type: legacy`, serving
+`main` at root, which means GitHub rebuilds it itself on every push - it has
+already rebuilt on `dce5b23` and `5226b20` with no Actions involvement. The
+`workflow` scope block does **not** affect publishing; it only blocks automating
+the tracker refresh.
+
+So DAGs are published as pages today, not only as artifacts. What is manual until
+the Smartsheet token arrives is the *refresh*: export CSV, regenerate, commit,
+push - and the site updates itself from there.
+
 ## Repo hygiene
 
 - [x] ~~Commit and push.~~ Done 2026-08-18.

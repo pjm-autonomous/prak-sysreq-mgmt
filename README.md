@@ -150,6 +150,18 @@ export SMARTSHEET_ACCESS_TOKEN=...
 python3 tools/build_dependency_dag.py --team electronics --live
 ```
 
+> **`--live` is currently unavailable.** The Smartsheet permission level in use
+> excludes API keys; an IT request is open. Until a token exists, refresh from a
+> CSV export instead — File > Export > Export to CSV in Smartsheet, then:
+>
+> ```bash
+> python3 tools/build_dependency_dag.py --team electronics --csv path/to/export.csv
+> python3 tools/build_index.py
+> ```
+>
+> Commit the refreshed snapshot and the site updates itself; see
+> [TODO.md](TODO.md).
+
 ## Teams and presets
 
 Both trackers are registered in [`tools/teams.py`](tools/teams.py), so a sheet id,
