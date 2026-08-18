@@ -40,6 +40,7 @@
   .lg-could { background: var(--could-bg); border-color: var(--could-br); }
   .lg-wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .lg-tts { border: 3px solid var(--fg); font-weight: 600; }
+  .lg-ext { border: 1px dashed var(--muted); color: var(--muted); }
   .note { margin-top: .6rem; padding: .5rem .7rem; border-left: 3px solid var(--accent);
           background: var(--panel); font-size: .85rem; }
 
@@ -158,17 +159,21 @@
   <h1>Embedded-Core Epic Dependency DAG</h1>
   <div class="stats">
     <span>87 epics &middot; 9 capabilities &middot; 8 hard + 1 soft edges</span>
-    <span>generated 2026-08-18 21:25 UTC</span>
+    <span>generated 2026-08-18 21:40 UTC</span>
     <span><a href="https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1" target="_blank" rel="noopener">open tracker &#8599;</a></span>
   </div>
   <div class="legend">
     <span class="lg-must">Must</span><span class="lg-should">Should</span>
     <span class="lg-could">Could</span><span class="lg-wont">Won't</span>
     <span class="lg-tts">bold border = 2TS required</span>
+    <span class="lg-ext">other tracker</span>
   </div>
   <div class="stats" style="margin-top:.4rem">
     <span>solid arrow = hard blocker &middot; dashed arrow = soft blocker &middot;
-          edge points blocker &rarr; dependent</span>
+          edge points blocker &rarr; dependent &middot;
+          <b>guess</b> on an edge = provisional, not yet confirmed in a meeting
+          &middot; dashed slanted node = an epic in another team's tracker,
+          shown for context and not counted here</span>
   </div>
   <div class="note">ILLUSTRATIVE EXAMPLE - the edges below are sample dependencies, not real tracker data. Shown to demonstrate how a populated DAG renders.</div>
 </header>
@@ -215,6 +220,7 @@ flowchart TB
   classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
+  classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;
   n_epic_confirm_estop_clear["Confirm E-Stop State Clear<br/><small>MCHTRNCS-134</small>"]
   n_epic_confirm_stop_capability["Confirm Stop-Capability<br/>Operational<br/><small>MCHTRNCS-139</small>"]
   n_epic_confirm_valid_path_plan_present["Confirm Valid Path Plan<br/>Present<br/><small>MCHTRNCS-135</small>"]
@@ -262,6 +268,7 @@ flowchart TB
   classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
+  classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;
   n_epic_all_stop_continuous_monitor["All Stop Continuous<br/>Communication Monitor<br/><small>MCHTRNCS-220</small>"]
   n_epic_reject_all_stop_init_when_remote_stop["Reject All Stop<br/>Initialization When Remote<br/>Stop Active<br/><small>MCHTRNCS-228</small>"]
   n_epic_stop_command_on_all_stop_100ms["Stop Command Within 100 ms<br/>on All Stop or Comm Loss<br/><small>MCHTRNCS-232</small>"]
@@ -301,6 +308,7 @@ flowchart TB
   classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
+  classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;
   n_epic_prohibited_transition_guard["Guard Against Prohibited<br/>Motion Transitions<br/><small>MCHTRNCS-203</small>"]
   n_epic_safe_state_transition_on_auth_loss["Transition to Safe State<br/>on Authorization Loss<br/><small>MCHTRNCS-142</small>"]
   n_epic_prohibited_transition_guard -.-> n_epic_safe_state_transition_on_auth_loss

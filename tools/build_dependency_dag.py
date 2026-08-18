@@ -68,6 +68,9 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import teams as team_registry  # noqa: E402
+
 DEFAULT_SHEET_ID = 8066207570677636
 SHEET_URL = "https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1"
 JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
@@ -85,6 +88,11 @@ PRIORITY_ORDER = ["Must Have", "Should Have", "Could Have", "Will Not Have"]
 UNASSIGNED = "unassigned"
 UNASSIGNED_LABEL = "No parent capability"
 
+# Blockers that live in another team's tracker are drawn, but are not this
+# team's epics: they get a prefixed synthetic id and stay out of the inventory.
+EXTERNAL_PREFIX = "external:"
+EXTERNAL_CAPABILITY = "other tracker"
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_VMODEL = os.path.normpath(os.path.join(_HERE, "..", "..", "prak-v-model"))
 DEFAULT_META_CACHE = os.path.normpath(
@@ -94,6 +102,9 @@ DEFAULT_CAP_JIRA = os.path.normpath(
 DEFAULT_MERMAID_BUNDLE = os.path.normpath(
     os.path.join(_HERE, "..", "vendor", "mermaid.min.js"))
 MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
+DEFAULT_OUTDIR = os.path.normpath(
+    os.path.join(_HERE, "..", "agile-planning", "dependency-dag"))
+DEFAULT_TITLE = "Embedded-Core Epic Dependency DAG"
 
 
 # --------------------------------------------------------------------------- #
@@ -240,18 +251,60 @@ def node_id(epic: str) -> str:
     return "n_" + re.sub(r"[^0-9a-zA-Z]+", "_", epic.strip()).strip("_")
 
 
-def parse_blockers(raw: str) -> list[tuple[str, str]]:
-    """Return list of (token, kind) where kind is 'hard' or 'soft'."""
+def split_blocker_refs(raw: str) -> list[str]:
+    """Split the Blocking Epics cell on separators that are NOT inside a
+    qualifier. Naive splitting on every comma tears "epic-x (Embedded, soft)"
+    in half, which silently produced garbage refs and then zero edges."""
+    parts, buf, depth = [], [], 0
+    for char in raw or "":
+        if char in "([":
+            depth += 1
+        elif char in ")]":
+            depth = max(0, depth - 1)
+        if char in ",;\n" and depth == 0:
+            parts.append("".join(buf))
+            buf = []
+        else:
+            buf.append(char)
+    parts.append("".join(buf))
+    return [p.strip() for p in parts if p.strip()]
+
+
+def parse_blockers(raw: str) -> list[tuple[str, str, bool, str]]:
+    """Parse the Blocking Epics cell into (ref, kind, provisional, hint).
+
+    Accepted per entry:  <ref> [(qualifier, ...)] [[marker]]
+    Qualifiers are comma-separated inside the parentheses, in any order:
+      hard / soft  - edge strength; untagged defaults to hard
+      anything else - a hint about where the ref lives, e.g. a team name
+                      ("Embedded") or a Jira key ("ET-2952"). Used only to label
+                      cross-tracker nodes; resolution always goes by the ref.
+    A bracketed [guess] marks the dependency as provisional - recorded from a
+    working assumption, not yet confirmed in an evaluation meeting.
+
+      epic-validate-supplied-path (Embedded, soft) [guess]
+      MCHTRNCS-220 (hard)
+      epic-all-stop-interface
+    """
     out = []
-    for tok in re.split(r"[,\n;]+", raw or ""):
-        tok = tok.strip()
-        if not tok:
-            continue
-        kind = "soft" if "soft" in tok.lower() else "hard"
-        ref = re.sub(r"\((?:hard|soft)\)", "", tok, flags=re.I)
-        ref = re.sub(r"\b(?:hard|soft)\b", "", ref, flags=re.I).strip(" :-–")
+    for token in split_blocker_refs(raw):
+        markers = [m.lower() for m in re.findall(r"\[([^\]]*)\]", token)]
+        provisional = any("guess" in m or "assum" in m or "tbc" in m
+                          for m in markers)
+        quals = []
+        for group in re.findall(r"\(([^)]*)\)", token):
+            quals += [q.strip() for q in group.split(",") if q.strip()]
+        kinds = {q.lower() for q in quals} & {"hard", "soft"}
+        hint = next((q for q in quals if q.lower() not in ("hard", "soft")), "")
+        ref = re.sub(r"\[[^\]]*\]|\([^)]*\)", "", token).strip(" :-\u2013")
+        # Tolerate a bare trailing "hard"/"soft" with no parentheses.
+        bare = re.search(r"[\s,;:-]+(hard|soft)$", ref, flags=re.I)
+        if bare:
+            kinds |= {bare.group(1).lower()}
+            ref = ref[:bare.start()].strip()
+        kind = "soft" if "soft" in kinds else "hard"
         if ref:
-            out.append((ref, kind))
+            out.append((ref, kind, provisional, hint))
     return out
 
 
@@ -288,10 +341,22 @@ def is_2ts(rec: dict) -> bool:
 # --------------------------------------------------------------------------- #
 # Graph building
 # --------------------------------------------------------------------------- #
-def build_edges(records: list[dict]) -> list[tuple[str, str, str]]:
-    """Resolve the Blocking Epics column into (blocker, dependent, kind) triples."""
+def build_edges(records: list[dict], cross: dict | None = None
+                ) -> tuple[list[tuple[str, str, str, bool]], dict[str, dict]]:
+    """Resolve Blocking Epics into (blocker, dependent, kind, provisional) plus
+    the synthetic records for any blocker that lives in another team's tracker.
+
+    A ref that resolves inside this sheet is an ordinary node. A ref that does
+    not is NOT dropped - dropping is what made cross-team dependencies invisible.
+    It becomes an external node, drawn distinctly and excluded from this team's
+    epic inventory and counts, because it is not this team's epic to deliver.
+
+    cross maps epic id or Jira key -> {"Title", "Jira Key"} from another team's
+    snapshot, and is used only to give external nodes a real title and Jira link.
+    """
     by_epic = {r["Epic"].strip(): r for r in records if r["Epic"].strip()}
     by_jira = {r["Jira Key"].strip().upper(): r for r in records if r["Jira Key"].strip()}
+    cross = cross or {}
 
     def resolve(ref: str) -> str | None:
         ref = ref.strip()
@@ -302,26 +367,60 @@ def build_edges(records: list[dict]) -> list[tuple[str, str, str]]:
         alt = "epic-" + re.sub(r"^(epic-|sysreq-)", "", ref)
         return alt if alt in by_epic else None
 
-    edges, seen = [], set()
+    edges, seen, externals = [], set(), {}
     for rec in records:
         dependent = rec["Epic"].strip()
-        for ref, kind in parse_blockers(rec["Blocking Epics"]):
+        for ref, kind, provisional, hint in parse_blockers(rec["Blocking Epics"]):
             blocker = resolve(ref)
-            if not blocker or blocker == dependent:
+            if blocker is None:
+                blocker = EXTERNAL_PREFIX + ref
+                known = cross.get(ref) or cross.get(ref.upper()) or {}
+                externals.setdefault(blocker, {
+                    "Epic": blocker,
+                    "Jira Key": known.get("Jira Key", ""),
+                    "Title": known.get("Title", "") or ref,
+                    "Capability": EXTERNAL_CAPABILITY,
+                    "Baseline Priority": "",
+                    "2TS Required": "",
+                    "Blocking Epics": "",
+                    "_ref": ref,
+                    "_hint": hint,
+                })
+            if blocker == dependent:
                 continue
-            key = (blocker, dependent, kind)
+            key = (blocker, dependent, kind, provisional)
             if key in seen:
                 continue
             seen.add(key)
             edges.append(key)
-    return edges
+    return edges, externals
+
+
+def load_cross_reference(paths: list[str]) -> dict:
+    """Index other teams' snapshots by epic id and Jira key, so a cross-tracker
+    blocker can be drawn with its real title instead of a bare slug."""
+    index = {}
+    for path in paths or []:
+        try:
+            rows = load_csv(path)
+        except SystemExit:
+            print(f"note: could not read --cross-reference {path}; external nodes "
+                  "will show bare refs", file=sys.stderr)
+            continue
+        for row in rows:
+            entry = {"Title": row["Title"].strip(), "Jira Key": row["Jira Key"].strip()}
+            if row["Epic"].strip():
+                index[row["Epic"].strip()] = entry
+            if entry["Jira Key"]:
+                index[entry["Jira Key"].upper()] = entry
+    return index
 
 
 def connected_components(nodes: set[str],
                          edges: list[tuple[str, str, str]]) -> list[list[str]]:
     """Group connected epics into components, treating edges as undirected."""
     adjacency: dict[str, set[str]] = {n: set() for n in nodes}
-    for blocker, dependent, _ in edges:
+    for blocker, dependent, *_ in edges:
         adjacency[blocker].add(dependent)
         adjacency[dependent].add(blocker)
 
@@ -352,12 +451,17 @@ CLASSDEFS = """  classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should_tts fill:#fff3d6,stroke:#7a3c00,stroke-width:4px,color:#111827;
   classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
-  classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;"""
+  classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
+  classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;"""
+
+
+def is_external(epic: str) -> bool:
+    return epic.startswith(EXTERNAL_PREFIX)
 
 
 def component_mermaid(group: list[str],
                       records_by_epic: dict[str, dict],
-                      edges: list[tuple[str, str, str]]) -> str:
+                      edges: list[tuple[str, str, str, bool]]) -> str:
     """Emit one top-to-bottom flowchart for a single connected component."""
     lines = ["flowchart TB", CLASSDEFS]
     members = set(group)
@@ -382,16 +486,24 @@ def component_mermaid(group: list[str],
             jira = rec["Jira Key"].strip()
             if jira:
                 label += f"<br/><small>{esc_mermaid(jira)}</small>"
-            lines.append(f'{indent}{nid}["{label}"]')
-            cls = priority_class(rec) + ("_tts" if is_2ts(rec) else "")
-            node_classes.append((nid, cls))
+            if is_external(epic):
+                where = rec.get("_hint", "") or "other tracker"
+                label += f"<br/><small>{esc_mermaid(where)}</small>"
+                lines.append(f'{indent}{nid}[/"{label}"/]')
+                node_classes.append((nid, "external"))
+            else:
+                lines.append(f'{indent}{nid}["{label}"]')
+                node_classes.append(
+                    (nid, priority_class(rec) + ("_tts" if is_2ts(rec) else "")))
         if wrap:
             lines.append("  end")
 
-    for blocker, dependent, kind in edges:
+    for blocker, dependent, kind, provisional in edges:
         if blocker in members and dependent in members:
             arrow = "-->" if kind == "hard" else "-.->"
-            lines.append(f"  {node_id(blocker)} {arrow} {node_id(dependent)}")
+            label = "|guess|" if provisional else ""
+            lines.append(
+                f"  {node_id(blocker)} {arrow}{label} {node_id(dependent)}")
 
     for epic in group:
         jira = records_by_epic[epic]["Jira Key"].strip()
@@ -585,13 +697,17 @@ def render_graph_panels(components: list[list[str]],
 
     panels = []
     for index, group in enumerate(components, start=1):
-        member_edges = sum(1 for b, d, _ in edges if b in set(group) and d in set(group))
+        members = set(group)
+        member_edges = sum(1 for b, d, *_ in edges if b in members and d in members)
+        externals_here = sum(1 for epic in group if is_external(epic))
         diagram = component_mermaid(group, records_by_epic, edges)
         panels.append(
             f'<section class="panel" data-panel="{index}">\n'
             f'  <div class="panel-head">\n'
             f'    <h3>Chain {index}</h3>\n'
-            f'    <span class="muted">{len(group)} epics &middot; {member_edges} edges</span>\n'
+            f'    <span class="muted">{len(group) - externals_here} epics'
+            f'{f" + {externals_here} external" if externals_here else ""}'
+            f' &middot; {member_edges} edges</span>\n'
             f'    <div class="zoom">\n'
             f'      <button type="button" data-zoom="out" title="Zoom out">&minus;</button>\n'
             f'      <button type="button" data-zoom="in" title="Zoom in">+</button>\n'
@@ -648,6 +764,7 @@ HTML_TEMPLATE = r"""<!doctype html>
   .lg-could { background: var(--could-bg); border-color: var(--could-br); }
   .lg-wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .lg-tts { border: 3px solid var(--fg); font-weight: 600; }
+  .lg-ext { border: 1px dashed var(--muted); color: var(--muted); }
   .note { margin-top: .6rem; padding: .5rem .7rem; border-left: 3px solid var(--accent);
           background: var(--panel); font-size: .85rem; }
 
@@ -773,10 +890,14 @@ HTML_TEMPLATE = r"""<!doctype html>
     <span class="lg-must">Must</span><span class="lg-should">Should</span>
     <span class="lg-could">Could</span><span class="lg-wont">Won't</span>
     <span class="lg-tts">bold border = 2TS required</span>
+    <span class="lg-ext">other tracker</span>
   </div>
   <div class="stats" style="margin-top:.4rem">
     <span>solid arrow = hard blocker &middot; dashed arrow = soft blocker &middot;
-          edge points blocker &rarr; dependent</span>
+          edge points blocker &rarr; dependent &middot;
+          <b>guess</b> on an edge = provisional, not yet confirmed in a meeting
+          &middot; dashed slanted node = an epic in another team's tracker,
+          shown for context and not counted here</span>
   </div>
   __NOTE__
 </header>
@@ -1045,8 +1166,12 @@ def mermaid_loader(mode: str, bundle: str, outdir: str) -> str:
 def build_html(records: list[dict], components: list[list[str]],
                edges: list[tuple[str, str, str]], stats_line: str,
                timestamp: str, note: str, meta: dict,
-               title: str, sheet_url: str, mermaid_html: str) -> str:
-    records_by_epic = {r["Epic"].strip(): r for r in records}
+               title: str, sheet_url: str, mermaid_html: str,
+               externals: dict | None = None) -> str:
+    # The graph draws this team's epics plus any cross-tracker blockers; the
+    # inventory below it draws only this team's epics.
+    nodes_by_epic = {r["Epic"].strip(): r for r in records}
+    nodes_by_epic.update(externals or {})
 
     capabilities = sorted({capability_of(r) for r in records},
                           key=capability_sort_key(meta))
@@ -1088,7 +1213,7 @@ def build_html(records: list[dict], components: list[list[str]],
         "__NOTE__": note_html,
         "__CAPABILITY_OPTS__": capability_opts,
         "__GRAPH_CAPTION__": caption,
-        "__PANELS__": render_graph_panels(components, records_by_epic, edges),
+        "__PANELS__": render_graph_panels(components, nodes_by_epic, edges),
         "__NODE_COUNT__": str(len(records)),
         "__TILES__": render_capability_tiles(records, meta),
         "__CARDS__": render_cards(records, meta),
@@ -1107,7 +1232,12 @@ def build_html(records: list[dict], components: list[list[str]],
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    src = ap.add_mutually_exclusive_group(required=True)
+    ap.add_argument("--team", choices=team_registry.ORDER,
+                    help="preset from tools/teams.py: fills the sheet id, sheet "
+                         "url, title, outdir, offline snapshot, and the other "
+                         "teams' snapshots for cross-tracker blockers. Any "
+                         "explicit flag wins over the preset.")
+    src = ap.add_mutually_exclusive_group(required=False)
     src.add_argument("--live", action="store_true", help="pull via Smartsheet API")
     src.add_argument("--csv", metavar="PATH", help="read a Grid CSV export")
     ap.add_argument("--sheet-id", type=int, default=DEFAULT_SHEET_ID)
@@ -1115,11 +1245,9 @@ def main() -> None:
                     help="tracker permalink for the viewer's 'open tracker' link. "
                          "Pass a different sheet's URL when generating another "
                          "team's DAG, or '' to omit the link entirely.")
-    ap.add_argument("--title", default="Embedded-Core Epic Dependency DAG",
+    ap.add_argument("--title", default=DEFAULT_TITLE,
                     help="page title and heading (default: %(default)s)")
-    here = os.path.dirname(os.path.abspath(__file__))
-    ap.add_argument("--outdir", default=os.path.normpath(
-        os.path.join(here, "..", "agile-planning", "dependency-dag")))
+    ap.add_argument("--outdir", default=DEFAULT_OUTDIR)
     ap.add_argument("--basename", default="dependency-dag",
                     help="output file stem (default: dependency-dag)")
     ap.add_argument("--note", default="",
@@ -1128,6 +1256,9 @@ def main() -> None:
     ap.add_argument("--vmodel", default=DEFAULT_VMODEL,
                     help="prak-v-model checkout, read for capability titles and "
                          "PRD ids (default: %(default)s)")
+    ap.add_argument("--cross-reference", action="append", metavar="CSV",
+                    help="another team's snapshot, used to label cross-tracker "
+                         "blockers with their real title and Jira key. Repeatable.")
     ap.add_argument("--mermaid", choices=["auto", "cdn", "vendor", "inline"],
                     default="auto",
                     help="how the viewer loads mermaid: vendor (reference the "
@@ -1143,29 +1274,66 @@ def main() -> None:
                          "without --vmodel still render labels")
     args = ap.parse_args()
 
+    # --team is a preset: it fills whatever the caller did not state explicitly,
+    # so the registry stays the single place a sheet id or output path is defined.
+    if args.team:
+        try:
+            cfg = team_registry.team(args.team)
+        except KeyError as exc:
+            ap.error(str(exc))
+        if args.sheet_id == DEFAULT_SHEET_ID:
+            args.sheet_id = cfg["sheet_id"]
+        if args.sheet_url == SHEET_URL:
+            args.sheet_url = cfg["sheet_url"]
+        if args.title == DEFAULT_TITLE:
+            args.title = cfg["title"]
+        if args.outdir == DEFAULT_OUTDIR:
+            args.outdir = team_registry.abspath(cfg["outdir"])
+        if args.csv is None and not args.live:
+            args.csv = team_registry.abspath(cfg["snapshot"])
+        if not args.cross_reference:
+            args.cross_reference = [
+                team_registry.abspath(o["snapshot"])
+                for o in team_registry.others(args.team)
+                if os.path.isfile(team_registry.abspath(o["snapshot"]))
+            ]
+
     meta = merge_capability_jira(
         load_capability_meta(args.vmodel, args.meta_cache), args.capability_jira)
+    if not args.live and not args.csv:
+        ap.error("pick a data source: --live, --csv PATH, or --team (which "
+                 "defaults to that team's committed snapshot)")
     records = load_live(args.sheet_id) if args.live else load_csv(args.csv)
     records = [r for r in records if r["Epic"].strip()]
     if not records:
         sys.exit("ERROR: no rows with an Epic id - nothing to render.")
 
     records_by_epic = {r["Epic"].strip(): r for r in records}
-    edges = build_edges(records)
+    cross = load_cross_reference(args.cross_reference)
+    edges, externals = build_edges(records, cross)
+    # External blockers are graph nodes but not this team's epics: they are kept
+    # out of records so the inventory, the tiles, and every count stay this
+    # team's own scope.
+    nodes_by_epic = {**records_by_epic, **externals}
     connected_nodes = {n for edge in edges for n in edge[:2]}
     components = connected_components(connected_nodes, edges)
 
     hard = sum(1 for e in edges if e[2] == "hard")
     soft = len(edges) - hard
+    provisional = sum(1 for e in edges if e[3])
     n_capabilities = len({capability_of(r) for r in records})
     stats_line = (f"{len(records)} epics &middot; {n_capabilities} capabilities "
                   f"&middot; {hard} hard + {soft} soft edges")
+    if externals:
+        stats_line += f" &middot; {len(externals)} external blockers"
+    if provisional:
+        stats_line += f" &middot; {provisional} provisional"
 
     timestamp = args.timestamp or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     if components:
         mermaid_src = "\n\n".join(
-            f"%% chain {i}\n" + component_mermaid(g, records_by_epic, edges)
+            f"%% chain {i}\n" + component_mermaid(g, nodes_by_epic, edges)
             for i, g in enumerate(components, start=1))
     else:
         mermaid_src = ("%% No dependencies recorded in the tracker's Blocking Epics "
@@ -1183,13 +1351,19 @@ def main() -> None:
                             timestamp, args.note, meta,
                             args.title, args.sheet_url,
                             mermaid_loader(args.mermaid, args.mermaid_bundle,
-                                           args.outdir)))
+                                           args.outdir),
+                            externals))
 
     print(f"wrote {mmd_path}")
     print(f"wrote {html_path}")
     print(f"  {len(records)} epics, {hard} hard + {soft} soft edges, "
           f"{len(connected_nodes)} in {len(components)} chain(s), "
           f"{n_capabilities} capabilities")
+    if externals:
+        print(f"  {len(externals)} external blocker(s) from another tracker: "
+              + ", ".join(sorted(r["_ref"] for r in externals.values())))
+    if provisional:
+        print(f"  {provisional} edge(s) marked provisional [guess]")
 
 
 if __name__ == "__main__":

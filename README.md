@@ -88,18 +88,24 @@ the only secret required.
 
 ## Electronics Epic Dependency DAG
 
-The Electronics-team counterpart, tracked **separately** from Embedded-Core. The
-two teams share parent PRD Capability Requirements but no epics: of the 15
-Electronics epics, zero appear in the 87-row Embedded-Core tracker.
+Dependency graph of the 15 Electronics (`ET-*`) PRAK epics, generated from the
+live Smartsheet tracker so it re-populates whenever the sheet changes.
 
-- **Source (for now):** `prak-v-model/agile-planning/epics/`, the 15 epics with
-  `platform-team: Electronics`. There is no Electronics Smartsheet tracker yet, so
-  unlike Embedded-Core this DAG is generated from the v-model repo rather than
-  from a live sheet.
-- **Snapshot:** [`data/tracker-snapshot-electronics.csv`](data/tracker-snapshot-electronics.csv)
+- **Tracker (source of truth):** [Electronics Epic Decomposition Tracker](https://app.smartsheet.com/sheets/JXr3hJVXxXPm6HxWWQQ845G2568xRcG35vJHRJ31)
+- **Generator:** `tools/build_dependency_dag.py --team electronics`
 - **Artifacts:** [`agile-planning/dependency-dag-electronics/`](agile-planning/dependency-dag-electronics/)
 
-15 epics across 4 capabilities:
+### Source
+
+Project **ET**, label **PRAK**, team **Electrical Platform** (`ET-2951`–`ET-2965`).
+Each epic is parented to a Mechatronics Initiative (`MCHTRNCS-###`); nodes group
+by **Capability**, fill by **Baseline Priority**, take a bold border when
+2TS = Yes, and link to their **ET** Jira epic.
+
+Electronics epics live in `ET`, not `MCHTRNCS` — the Embedded project. A Jira
+search scoped to `MCHTRNCS` will not find them.
+
+15 epics across 4 of the 9 capabilities:
 
 | Capability | Epics | Priority mix |
 |------------|-------|--------------|
@@ -108,23 +114,62 @@ Electronics epics, zero appear in the 87-row Embedded-Core tracker.
 | CAP-08 Tele-operation | 7 | 4 Must, 3 Should |
 | CAP-09 Observable Runtime State | 1 | 1 Must |
 
-**Jira keys** are the `ET` project epics `ET-2951`..`ET-2965` (Electrical Team).
-Electronics epics live in `ET`, not `MCHTRNCS` — the Embedded epics' project — so
-a search scoped to `MCHTRNCS` will not find them.
+### Dependencies
 
-Each epic's Jira parent independently confirms its capability: all 15 agree with
-the capability resolved through `prak-v-model`, zero disagreements.
+Edges come from the **Blocking Epics** column — `(hard)` solid, `(soft)` dashed,
+untagged defaults to hard. An entry may carry a comma-separated qualifier list
+and a provisional marker:
 
-### Regenerating
-
-```bash
-python3 tools/build_dependency_dag.py   --csv data/tracker-snapshot-electronics.csv   --outdir agile-planning/dependency-dag-electronics   --basename dependency-dag   --title "Electronics Epic Dependency DAG"   --sheet-url ""
+```
+epic-validate-supplied-path (Embedded, soft) [guess]
+epic-publish-motion-authorization-state (ET-2952, soft) [guess]
 ```
 
-Rebuild the snapshot from `prak-v-model` whenever its Electronics epics change,
-then refill the `Jira Key` column from a Jira export of the `ET` project.
-Once an Electronics tracker sheet exists, swap `--csv` for `--live --sheet-id
-<id> --sheet-url <url>`; no other change is needed.
+- The qualifier list is parsed as a set: `hard`/`soft` set edge strength, and
+  anything else (`Embedded`, `ET-2952`) is a **hint** about where the blocker
+  lives. Hints are used to label the node, never to resolve it.
+- **`[guess]`** marks the dependency provisional — a working assumption not yet
+  confirmed in an evaluation meeting. Those edges are labelled **guess** in the
+  diagram and counted separately in the header.
+
+**Cross-team blockers** (an Embedded `epic-…`) do not resolve inside the
+Electronics sheet. They are **not dropped**: each becomes an **external node**,
+drawn as a dashed slanted box grouped under *other tracker*, and excluded from
+this team's epic count, capability tiles, and inventory — it is not Electronics
+work to deliver. When the other team's snapshot is available (the `--team` preset
+passes it automatically) the external node shows that epic's real title and links
+to its `MCHTRNCS` Jira issue. It is not linked to the Embedded *tracker*.
+
+Current state: **9 dependencies, 1 hard + 8 soft, all 9 provisional**, pulling in
+7 distinct external Embedded blockers.
+
+### Refresh
+
+```bash
+export SMARTSHEET_ACCESS_TOKEN=...
+python3 tools/build_dependency_dag.py --team electronics --live
+```
+
+## Teams and presets
+
+Both trackers are registered in [`tools/teams.py`](tools/teams.py), so a sheet id,
+URL, title, or output path is stated exactly once and every generator reads the
+same entry. Adding a third team means adding one entry there.
+
+| Team | Preset | Sheet id | Jira |
+|------|--------|----------|------|
+| Embedded-Core | `--team embedded` | `8066207570677636` | project `MCHTRNCS`, VSP-Embedded |
+| Electronics | `--team electronics` | `5660443916849028` | project `ET`, Electrical Platform |
+
+`--team` is a preset, not a mode: it fills the sheet id, sheet URL, page title,
+output directory, offline snapshot, and the *other* teams' snapshots for
+cross-tracker blocker labels. Any flag you pass explicitly wins over the preset.
+
+```bash
+python3 tools/build_dependency_dag.py --team electronics          # offline, from the snapshot
+python3 tools/build_dependency_dag.py --team electronics --live    # from the sheet
+python3 tools/export_snapshot.py --team electronics                # refresh the snapshot
+```
 
 ## Published site
 
@@ -160,9 +205,13 @@ after every meeting and would otherwise churn git history.
 ## Automated refresh
 
 `.github/workflows/refresh-dag.yml` runs 07:00 UTC on weekdays, and on demand
-from the Actions tab. It re-reads the Embedded-Core tracker, refreshes
-`data/tracker-snapshot.csv`, rebuilds the DAG and landing page, and commits only
-if something changed. Electronics is not refreshed, having no tracker yet.
+from the Actions tab. For **both** teams it refreshes the snapshot from the live
+sheet, rebuilds the DAG, then rebuilds the landing page, and commits only if
+something changed.
+
+Snapshots are refreshed before the DAGs are built, and the DAGs are then built
+offline from those snapshots, so the diagram and the progress percentages always
+describe the same read of each sheet.
 
 > **Not yet committed.** The file exists locally but GitHub refused the push:
 > creating anything under `.github/workflows/` needs the `workflow` OAuth scope,

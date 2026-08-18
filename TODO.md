@@ -4,92 +4,60 @@ Owner: Patrick McKee, serving as SE for both VSP-Embedded and Electronics.
 
 ## Electronics Epic Dependency DAG
 
-Status: **DAG built and generating** from `prak-v-model`. Two things are still
-open: Jira keys, and a Smartsheet tracker to replace the v-model as the source.
+Status: **live.** Tracker exists (sheet `5660443916849028`), 15 epics, 9
+dependencies recorded, DAG generating from it.
 
 ### Decision: isolated tracking
 
-Electronics tracking is **separate** from Embedded-Core: separate tracker,
-separate diagrams, separate standing agenda. The two epic sets are disjoint - of
-the 15 Electronics epics, **zero** appear in the 87-row Embedded-Core tracker -
-so splitting them loses nothing.
+Separate tracker, separate diagrams, separate standing agenda. The two epic sets
+are disjoint - of the 15 Electronics epics, zero appear in the 87-row
+Embedded-Core tracker.
 
-The teams overlap only **above** the epic layer, at the shared Jira parent issues
-(PRD Capability Requirements, `CAP-nn` / `product/requirements/product/capreq-*.md`
-in `prak-v-model`). Cross-team relationships therefore get expressed at the
-capability level, not in a tracker's `Blocking Epics` column. Do not try to encode
-cross-team edges in either sheet: `Blocking Epics` resolves epic ids within one
-sheet only, and a dangling reference silently drops the edge.
-
-Both teams' epics do map onto the same capabilities, so the capability grouping is
+The teams overlap only **above** the epic layer, at the shared PRD Capability
+Requirements (Jira `Initiative` issues `MCHTRNCS-259`..`-266`, `-268`). Both
+teams' epics map onto the same capabilities, so the capability grouping is
 directly comparable across the two DAGs:
 
-| Capability | Embedded epics | Electronics epics |
-|------------|---------------:|------------------:|
+| Capability | Embedded | Electronics |
+|------------|---------:|------------:|
 | CAP-01 Motion Authorization | 10 | 5 |
 | CAP-03 Path Execution and Objectives Translation | 12 | 2 |
 | CAP-08 Tele-operation | 11 | 7 |
 | CAP-09 Observable Runtime State | 1 | 1 |
 | CAP-02, CAP-04, CAP-05, CAP-06, CAP-07 | 53 | 0 |
 
+Cross-team dependency is expressed by referencing the other team's epic id in
+`Blocking Epics`. It renders as an **external node** rather than resolving, since
+`Blocking Epics` only resolves ids within its own sheet. External nodes are drawn
+for context and excluded from the referencing team's counts.
+
 ### Done 2026-08-18
 
-- [x] Source epic set identified: 15 epics with `platform-team: Electronics` in
-      `prak-v-model/agile-planning/epics/`, all also `Allocation: Electronics`.
-- [x] Capability resolved for all 15 by following each epic's `parent-initiative`
-      to that initiative's `parent-capability-requirement`. 4 capabilities, no
-      unmapped epics.
-- [x] Snapshot written: `data/tracker-snapshot-electronics.csv`, same 7-column
-      shape the generator reads.
-- [x] Generator parameterized with `--sheet-url` and `--title`, so a second
-      team's DAG no longer inherits the Embedded-Core heading or tracker link.
-      `--sheet-url ""` omits the link when there is no tracker to open.
-- [x] DAG generated to `agile-planning/dependency-dag-electronics/`.
-- [x] Separate standing agenda forked:
-      `agile-planning/meeting-agenda/standingagenda-electronics.{txt,html}`.
-      The Embedded pair was renamed to `standingagenda-embedded.*` so neither
-      file is the unlabeled default.
-
-### Correction logged 2026-08-18
-
-An earlier pass recorded that the 15 Electronics epics did not exist in Jira.
-That was wrong: they are project `ET` (Electrical Team), keys `ET-2951` through
-`ET-2965`, team `Electrical Platform`. The search that produced the wrong answer
-was scoped to `project = MCHTRNCS`, which holds the Embedded epics and could
-never have matched. Keys are now filled in and the DAG links to them.
-
-The same export also supplied the shared capability parents as Jira `Initiative`
-issues (`MCHTRNCS-259`..`-266`, `-268`), and above them 6 `Objective` issues
-(the Use Cases, `MCHTRNCS-109`/`110`/`111`/`112`/`243`/`267`).
+- [x] Tracker created and populated: 15 epics, capability + priority + Jira keys.
+- [x] Jira keys filled: project `ET`, `ET-2951`..`ET-2965`. Each epic's Jira
+      parent independently confirms its capability - 15/15 agree with the
+      capability resolved through `prak-v-model`.
+- [x] Capability tiles link to their shared Jira Initiative parent.
+- [x] `tools/teams.py` registry added; both generators read it. `--team embedded`
+      / `--team electronics` replace the long per-team command lines.
+- [x] **Fixed a silent edge-dropping bug.** `Blocking Epics` entries of the form
+      `epic-x (Embedded, soft) [guess]` were split on the comma inside the
+      qualifier list, producing garbage refs that then failed to resolve and were
+      discarded. All 9 Electronics dependencies would have rendered as zero edges
+      while the output looked healthy.
+- [x] Cross-team blockers now render as external nodes instead of being dropped,
+      labelled with the other team's title and Jira link via `--cross-reference`
+      (passed automatically by `--team`).
+- [x] Provisional `[guess]` dependencies are parsed, labelled **guess** on the
+      edge, and counted separately in the header.
 
 ### Still open
 
 | Need | Why | Who |
 |------|-----|-----|
-| Electronics tracker sheet | The DAG reads `prak-v-model` today, so it reflects the repo rather than meeting decisions. `2TS Required`, `Story Count`, estimates, and `Blocking Epics` have nowhere to live until a sheet exists, which means the Electronics DAG cannot gain edges. | Patrick |
-| RACI for the Electronics meeting | The forked agenda carries `TBD` for the SME, capacity, and 2TS-consulted roles. Embedded roles do not carry over automatically. | Patrick + Clint Jones |
-
-### Creating the tracker
-
-Mirror the Embedded-Core sheet exactly: the 7 generator columns (`Epic`,
-`Jira Key`, `Title`, `Capability`, `Baseline Priority`, `2TS Required`,
-`Blocking Epics`) plus the meeting-input columns (`Batch`, `2TS Rank`,
-`Story Count`, `Story Titles`, `Time per Story (days)`, `Epic Total (days)`,
-`Owner`, `Confidence`, `Eval Status`). `Capability` holds a capreq slug - the
-capreq filename with the leading `capreq-` dropped - which is how the generator
-resolves the `CAP-nn` id and title. Seed the rows from
-`data/tracker-snapshot-electronics.csv`.
-
-Then switch the generator over; nothing else changes:
-
-```bash
-python3 tools/build_dependency_dag.py --live \
-  --sheet-id <ELECTRONICS_SHEET_ID> \
-  --sheet-url <ELECTRONICS_SHEET_URL> \
-  --outdir agile-planning/dependency-dag-electronics \
-  --basename dependency-dag \
-  --title "Electronics Epic Dependency DAG"
-```
+| Confirm the 9 provisional dependencies | Every recorded edge is tagged `[guess]` - a working assumption, not a meeting decision. Until confirmed the Electronics critical path is indicative only. | Electronics evaluation meeting |
+| Electronics meeting RACI | The agenda carries `TBD` for the SME, capacity, and 2TS-consulted roles. Embedded roles do not carry over automatically. | Patrick + Clint Jones |
+| Evaluate the 15 epics | `2TS Required` is `TBD` on all 15; no story counts or estimates yet. | Electronics evaluation meeting |
 
 ## Embedded-Core
 

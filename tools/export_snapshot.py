@@ -22,15 +22,27 @@ import sys
 
 # Reuse the API client and column contract rather than restating them.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import teams as team_registry  # noqa: E402
 from build_dependency_dag import COLS, DEFAULT_SHEET_ID, load_live  # noqa: E402
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--team", choices=team_registry.ORDER,
+                    help="preset from tools/teams.py: fills --sheet-id and --out")
     ap.add_argument("--sheet-id", type=int, default=DEFAULT_SHEET_ID)
-    ap.add_argument("--out", required=True, help="CSV path to write")
+    ap.add_argument("--out", help="CSV path to write")
     args = ap.parse_args()
+
+    if args.team:
+        cfg = team_registry.team(args.team)
+        if args.sheet_id == DEFAULT_SHEET_ID:
+            args.sheet_id = cfg["sheet_id"]
+        if not args.out:
+            args.out = team_registry.abspath(cfg["snapshot"])
+    if not args.out:
+        ap.error("pass --out PATH or --team")
 
     records = [r for r in load_live(args.sheet_id) if r["Epic"].strip()]
     if not records:

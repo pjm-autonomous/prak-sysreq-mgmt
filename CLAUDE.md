@@ -7,10 +7,14 @@ decomposition-progress views, generated from the trackers of record.
 
 Two teams' PRAK epics, tracked separately, sharing one capability layer:
 
-| Team | Epics | Jira | Tracker of record |
-|------|------:|------|-------------------|
-| Embedded-Core | 87 | project `MCHTRNCS`, team VSP-Embedded | Smartsheet, sheet id `8066207570677636` |
-| Electronics | 15 | project `ET`, team Electrical Platform | none yet; sourced from `prak-v-model` |
+| Team | Epics | Jira | Tracker of record | Preset |
+|------|------:|------|-------------------|--------|
+| Embedded-Core | 87 | project `MCHTRNCS`, team VSP-Embedded | Smartsheet `8066207570677636` | `--team embedded` |
+| Electronics | 15 | project `ET`, team Electrical Platform | Smartsheet `5660443916849028` | `--team electronics` |
+
+Both are registered in `tools/teams.py`. **That is the only place a sheet id, URL,
+title, or output path belongs** - every generator reads it. Adding a team means
+adding one entry there and nothing else.
 
 Both teams' epics hang off the same 9 PRD Capability Requirements, which are Jira
 `Initiative` issues (`MCHTRNCS-259`..`-266`, `-268`). **That is the only layer the
@@ -52,25 +56,26 @@ epic ids within a single sheet only and silently drops dangling references.
 ## Rebuilding everything
 
 ```bash
-# Embedded-Core, live from Smartsheet (needs a token) or from the snapshot
-export SMARTSHEET_ACCESS_TOKEN=...
-python3 tools/build_dependency_dag.py --live --basename dependency-dag
-# ... or offline:
-python3 tools/build_dependency_dag.py --csv data/tracker-snapshot.csv --basename dependency-dag
+export SMARTSHEET_ACCESS_TOKEN=...        # only needed for --live
+
+# Refresh snapshots from the sheets, then build offline from them, so the
+# diagrams and the progress percentages describe the same read.
+python3 tools/export_snapshot.py --team embedded
+python3 tools/export_snapshot.py --team electronics
+python3 tools/build_dependency_dag.py --team embedded
+python3 tools/build_dependency_dag.py --team electronics
 
 # The illustrative example render
 python3 tools/build_dependency_dag.py --csv data/tracker-snapshot.example.csv \
   --basename dependency-dag.example \
   --note "ILLUSTRATIVE EXAMPLE - the edges below are sample dependencies, not real tracker data. Shown to demonstrate how a populated DAG renders."
 
-# Electronics
-python3 tools/build_dependency_dag.py --csv data/tracker-snapshot-electronics.csv \
-  --outdir agile-planning/dependency-dag-electronics --basename dependency-dag \
-  --title "Electronics Epic Dependency DAG" --sheet-url ""
-
-# Landing page last - it counts from the snapshots
+# Landing page LAST - it counts from the snapshots
 python3 tools/build_index.py
 ```
+
+Without a token, `--team <x>` alone builds offline from that team's committed
+snapshot.
 
 `.github/workflows/refresh-dag.yml` does the Embedded refresh on a schedule and
 commits any change.
@@ -84,6 +89,15 @@ commits any change.
   `MCHTRNCS` will not find them - this already caused one wrong conclusion.
 - `Blocking Epics` direction is **blocker -> dependent**. `(hard)` means cannot
   start, `(soft)` means cannot finish; untagged defaults to hard.
+- A blocker entry may carry a comma-separated qualifier list and a marker:
+  `epic-x (Embedded, soft) [guess]`. Qualifiers other than hard/soft are hints
+  about where the blocker lives and never affect resolution. `[guess]` marks the
+  edge provisional. **Never split that cell on commas naively** - doing so tore
+  entries in half and silently produced zero edges.
+- A blocker that does not resolve inside the sheet is **not dropped**: it becomes
+  an external node, drawn under *other tracker* and excluded from that team's
+  counts, tiles, and inventory. Dropping it is what made cross-team dependencies
+  invisible.
 - The generator needs `prak-v-model` checked out as a **sibling directory** for
   capability titles, or it falls back to `data/capability-meta.json`, or to bare
   slugs. Override with `--vmodel`.

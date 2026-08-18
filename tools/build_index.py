@@ -25,33 +25,25 @@ import csv
 import html
 import json
 import os
+import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.normpath(os.path.join(_HERE, ".."))
-JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
-EMBEDDED_TRACKER = ("https://app.smartsheet.com/sheets/"
-                    "gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1")
+sys.path.insert(0, _HERE)
+import teams as team_registry  # noqa: E402
 
-# One entry per team. Add the Electronics tracker URL here once the sheet exists.
+ROOT = team_registry.ROOT
+JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
+
+# Teams come from tools/teams.py so a sheet url or output path is defined once.
+# The per-team paths a DAG produces are derived from that entry's outdir.
 TEAMS = [
     {
-        "name": "Embedded-Core",
-        "jira": "VSP-Embedded, project MCHTRNCS",
-        "snapshot": "data/tracker-snapshot.csv",
-        "dag": "agile-planning/dependency-dag/dependency-dag.html",
-        "mmd": "agile-planning/dependency-dag/dependency-dag.mmd",
-        "agenda": "agile-planning/meeting-agenda/standingagenda-embedded.html",
-        "tracker": EMBEDDED_TRACKER,
-    },
-    {
-        "name": "Electronics",
-        "jira": "Electrical Platform, project ET",
-        "snapshot": "data/tracker-snapshot-electronics.csv",
-        "dag": "agile-planning/dependency-dag-electronics/dependency-dag.html",
-        "mmd": "agile-planning/dependency-dag-electronics/dependency-dag.mmd",
-        "agenda": "agile-planning/meeting-agenda/standingagenda-electronics.html",
-        "tracker": "",
-    },
+        **cfg,
+        "dag": f"{cfg['outdir']}/dependency-dag.html",
+        "mmd": f"{cfg['outdir']}/dependency-dag.mmd",
+        "tracker": cfg["sheet_url"],
+    }
+    for cfg in (team_registry.team(slug) for slug in team_registry.ORDER)
 ]
 
 
