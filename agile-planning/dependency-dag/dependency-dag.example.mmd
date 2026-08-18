@@ -1,0 +1,82 @@
+%% chain 1
+flowchart TB
+  classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+  classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+  classDef could fill:#e6f0fd,stroke:#175cd3,color:#111827;
+  classDef wont fill:#eceef2,stroke:#667085,color:#111827;
+  classDef must_tts fill:#fde4e1,stroke:#7a0b02,stroke-width:4px,color:#111827;
+  classDef should_tts fill:#fff3d6,stroke:#7a3c00,stroke-width:4px,color:#111827;
+  classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
+  classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
+  classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
+  n_epic_confirm_estop_clear["Confirm E-Stop State Clear<br/><small>MCHTRNCS-134</small>"]
+  n_epic_confirm_stop_capability["Confirm Stop-Capability<br/>Operational<br/><small>MCHTRNCS-139</small>"]
+  n_epic_confirm_valid_path_plan_present["Confirm Valid Path Plan<br/>Present<br/><small>MCHTRNCS-135</small>"]
+  n_epic_evaluate_vehicle_state_conditions["Evaluate Vehicle-State<br/>Safe-to-Move Conditions<br/><small>MCHTRNCS-195</small>"]
+  n_epic_gate_continuous_motion_authorization["Continuously Gate Motion<br/>Authorization<br/><small>MCHTRNCS-141</small>"]
+  n_epic_withhold_motion_until_recovery_authorized["Withhold Motion Until<br/>Authorized Recovery<br/><small>MCHTRNCS-130</small>"]
+  n_epic_evaluate_vehicle_state_conditions --> n_epic_gate_continuous_motion_authorization
+  n_epic_confirm_estop_clear --> n_epic_gate_continuous_motion_authorization
+  n_epic_confirm_stop_capability --> n_epic_gate_continuous_motion_authorization
+  n_epic_confirm_valid_path_plan_present --> n_epic_gate_continuous_motion_authorization
+  n_epic_gate_continuous_motion_authorization --> n_epic_withhold_motion_until_recovery_authorized
+  click n_epic_confirm_estop_clear "https://asirobots.atlassian.net/browse/MCHTRNCS-134" _blank
+  click n_epic_confirm_stop_capability "https://asirobots.atlassian.net/browse/MCHTRNCS-139" _blank
+  click n_epic_confirm_valid_path_plan_present "https://asirobots.atlassian.net/browse/MCHTRNCS-135" _blank
+  click n_epic_evaluate_vehicle_state_conditions "https://asirobots.atlassian.net/browse/MCHTRNCS-195" _blank
+  click n_epic_gate_continuous_motion_authorization "https://asirobots.atlassian.net/browse/MCHTRNCS-141" _blank
+  click n_epic_withhold_motion_until_recovery_authorized "https://asirobots.atlassian.net/browse/MCHTRNCS-130" _blank
+  class n_epic_confirm_estop_clear must;
+  class n_epic_confirm_stop_capability must;
+  class n_epic_confirm_valid_path_plan_present must;
+  class n_epic_evaluate_vehicle_state_conditions must;
+  class n_epic_gate_continuous_motion_authorization must;
+  class n_epic_withhold_motion_until_recovery_authorized must;
+
+
+%% chain 2
+flowchart TB
+  classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+  classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+  classDef could fill:#e6f0fd,stroke:#175cd3,color:#111827;
+  classDef wont fill:#eceef2,stroke:#667085,color:#111827;
+  classDef must_tts fill:#fde4e1,stroke:#7a0b02,stroke-width:4px,color:#111827;
+  classDef should_tts fill:#fff3d6,stroke:#7a3c00,stroke-width:4px,color:#111827;
+  classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
+  classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
+  classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
+  n_epic_all_stop_continuous_monitor["All Stop Continuous<br/>Communication Monitor<br/><small>MCHTRNCS-220</small>"]
+  n_epic_reject_all_stop_init_when_remote_stop["Reject All Stop<br/>Initialization When Remote<br/>Stop Active<br/><small>MCHTRNCS-228</small>"]
+  n_epic_stop_command_on_all_stop_100ms["Stop Command Within 100 ms<br/>on All Stop or Comm Loss<br/><small>MCHTRNCS-232</small>"]
+  n_epic_subscribe_all_stop_broadcaster["Subscribe to All Stop<br/>Broadcaster<br/><small>MCHTRNCS-234</small>"]
+  n_epic_subscribe_all_stop_broadcaster --> n_epic_all_stop_continuous_monitor
+  n_epic_subscribe_all_stop_broadcaster --> n_epic_reject_all_stop_init_when_remote_stop
+  n_epic_all_stop_continuous_monitor --> n_epic_stop_command_on_all_stop_100ms
+  click n_epic_all_stop_continuous_monitor "https://asirobots.atlassian.net/browse/MCHTRNCS-220" _blank
+  click n_epic_reject_all_stop_init_when_remote_stop "https://asirobots.atlassian.net/browse/MCHTRNCS-228" _blank
+  click n_epic_stop_command_on_all_stop_100ms "https://asirobots.atlassian.net/browse/MCHTRNCS-232" _blank
+  click n_epic_subscribe_all_stop_broadcaster "https://asirobots.atlassian.net/browse/MCHTRNCS-234" _blank
+  class n_epic_all_stop_continuous_monitor must;
+  class n_epic_reject_all_stop_init_when_remote_stop must;
+  class n_epic_stop_command_on_all_stop_100ms must;
+  class n_epic_subscribe_all_stop_broadcaster must;
+
+
+%% chain 3
+flowchart TB
+  classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+  classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+  classDef could fill:#e6f0fd,stroke:#175cd3,color:#111827;
+  classDef wont fill:#eceef2,stroke:#667085,color:#111827;
+  classDef must_tts fill:#fde4e1,stroke:#7a0b02,stroke-width:4px,color:#111827;
+  classDef should_tts fill:#fff3d6,stroke:#7a3c00,stroke-width:4px,color:#111827;
+  classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
+  classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
+  classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
+  n_epic_prohibited_transition_guard["Guard Against Prohibited<br/>Motion Transitions<br/><small>MCHTRNCS-203</small>"]
+  n_epic_safe_state_transition_on_auth_loss["Transition to Safe State<br/>on Authorization Loss<br/><small>MCHTRNCS-142</small>"]
+  n_epic_prohibited_transition_guard -.-> n_epic_safe_state_transition_on_auth_loss
+  click n_epic_prohibited_transition_guard "https://asirobots.atlassian.net/browse/MCHTRNCS-203" _blank
+  click n_epic_safe_state_transition_on_auth_loss "https://asirobots.atlassian.net/browse/MCHTRNCS-142" _blank
+  class n_epic_prohibited_transition_guard must;
+  class n_epic_safe_state_transition_on_auth_loss must;

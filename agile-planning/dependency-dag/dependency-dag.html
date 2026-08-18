@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embedded-Core Epic Dependency DAG</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #111827; --muted: #667085; --line: #e4e7ec;
+    --panel: #fbfcfd; --chip: #f2f4f7; --link: #175cd3; --accent: #175cd3;
+    --must-bg: #fde4e1; --must-br: #b42318;
+    --should-bg: #fff3d6; --should-br: #b25e09;
+    --could-bg: #e6f0fd; --could-br: #175cd3;
+    --wont-bg: #eceef2; --wont-br: #667085;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1319; --fg: #e6e8ec; --muted: #98a2b3; --line: #2a3039;
+      --panel: #161b22; --chip: #232a34; --link: #7cb0ff; --accent: #7cb0ff;
+      --must-bg: #4a1c17; --must-br: #f2705d;
+      --should-bg: #4a3410; --should-br: #f5b544;
+      --could-bg: #14304f; --could-br: #7cb0ff;
+      --wont-bg: #262b33; --wont-br: #98a2b3;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+         margin: 0; padding: 1.2rem 1.4rem 3rem; background: var(--bg); color: var(--fg);
+         line-height: 1.45; }
+  a { color: var(--link); }
+  .muted { color: var(--muted); font-size: .85rem; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: .8rem; margin-bottom: 1rem; }
+  h1 { font-size: 1.2rem; margin: 0 0 .4rem; }
+  .stats { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; align-items: baseline;
+           color: var(--muted); font-size: .85rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
+  .legend span { display: inline-block; padding: .1rem .5rem; border-radius: 4px;
+                 font-size: .78rem; border: 1px solid; color: var(--fg); }
+  .lg-must { background: var(--must-bg); border-color: var(--must-br); }
+  .lg-should { background: var(--should-bg); border-color: var(--should-br); }
+  .lg-could { background: var(--could-bg); border-color: var(--could-br); }
+  .lg-wont { background: var(--wont-bg); border-color: var(--wont-br); }
+  .lg-tts { border: 3px solid var(--fg); font-weight: 600; }
+  .note { margin-top: .6rem; padding: .5rem .7rem; border-left: 3px solid var(--accent);
+          background: var(--panel); font-size: .85rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: .5rem .7rem; align-items: center;
+             margin: 0 0 1.2rem; padding: .6rem .7rem; background: var(--panel);
+             border: 1px solid var(--line); border-radius: 8px; position: sticky;
+             top: 0; z-index: 20; }
+  .toolbar input, .toolbar select, .toolbar button {
+      font: inherit; font-size: .87rem; padding: .3rem .5rem; color: var(--fg);
+      background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+  .toolbar input { min-width: 15rem; flex: 1 1 15rem; }
+  .toolbar button { cursor: pointer; }
+  .toolbar button:hover { border-color: var(--accent); }
+  #count { margin-left: auto; color: var(--muted); font-size: .85rem; white-space: nowrap; }
+
+  h2 { font-size: 1rem; margin: 1.8rem 0 .6rem; padding-bottom: .3rem;
+       border-bottom: 1px solid var(--line); }
+  h2 .muted { font-weight: 400; margin-left: .5rem; }
+
+  .empty { padding: 1rem 1.1rem; border: 1px dashed var(--line); border-radius: 8px;
+           background: var(--panel); max-width: 62ch; }
+  .empty p { margin: .3rem 0; }
+  .empty code { background: var(--chip); padding: .05rem .3rem; border-radius: 4px; }
+
+  .panel { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 1rem;
+           background: var(--panel); overflow: hidden; }
+  .panel-head { display: flex; align-items: center; gap: .7rem; padding: .45rem .7rem;
+                border-bottom: 1px solid var(--line); }
+  .panel-head h3 { font-size: .9rem; margin: 0; }
+  .zoom { margin-left: auto; display: flex; gap: .25rem; }
+  .zoom button { font: inherit; font-size: .8rem; padding: .15rem .5rem; cursor: pointer;
+                 background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+                 border-radius: 5px; }
+  .zoom button:hover { border-color: var(--accent); }
+  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
+              cursor: grab; background: var(--bg); }
+  .viewport.dragging { cursor: grabbing; }
+  .canvas { transform-origin: 0 0; padding: 1rem; }
+  .canvas pre.mermaid { margin: 0; background: none; }
+  .node.dim { opacity: .15; }
+
+  /* ---- inventory level 1: capability tiles ---- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+           gap: .7rem; }
+  .tile { font: inherit; text-align: left; cursor: pointer; color: var(--fg);
+          background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          padding: .7rem .8rem .75rem; display: flex; flex-direction: column;
+          gap: .4rem; transition: border-color .12s, transform .12s; }
+  .tile:hover, .tile:focus-visible { border-color: var(--accent);
+          transform: translateY(-1px); outline: none; }
+  .tile.unmapped { border-style: dashed; }
+  .tile-head { display: flex; align-items: baseline; gap: .5rem; }
+  .tile-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+               font-size: .74rem; letter-spacing: .02em; text-transform: uppercase;
+               color: var(--fg); background: var(--chip); border-radius: 999px;
+               padding: .1rem .45rem; }
+  .tile-n { margin-left: auto; color: var(--muted); font-size: .8rem; }
+  .tile h3 { font-size: .98rem; margin: 0; line-height: 1.25; }
+  .cap { color: var(--muted); font-size: .78rem; }
+  .bars { display: flex; gap: 2px; height: 6px; border-radius: 999px; overflow: hidden;
+          background: var(--chip); }
+  .bar { display: block; min-width: 3px; }
+  .bar.must { background: var(--must-br); }
+  .bar.should { background: var(--should-br); }
+  .bar.could { background: var(--could-br); }
+  .bar.wont { background: var(--wont-br); }
+  .tile-meta { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .tile-meta .chip { font-size: .7rem; padding: .05rem .4rem; border-radius: 999px;
+                     background: var(--chip); color: var(--fg); }
+
+  /* ---- inventory level 2: one capability's epics ---- */
+  .cap-detail { border: 1px solid var(--line); border-radius: 10px;
+                margin-bottom: .8rem; background: var(--panel); }
+  .cap-detail[hidden] { display: none; }
+  .detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem;
+                 padding: .55rem .7rem; border-bottom: 1px solid var(--line); }
+  .detail-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+  .detail-head h3 { font-size: .98rem; margin: 0; }
+  .detail-code { font-size: .74rem; background: var(--chip); border-radius: 999px;
+                 padding: .1rem .45rem; }
+  .detail-n { color: var(--muted); font-size: .8rem; }
+  .detail-head .cap { flex-basis: 100%; }
+  .back { font: inherit; font-size: .82rem; padding: .2rem .55rem; cursor: pointer;
+          color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+          border-radius: 6px; }
+  .back:hover { border-color: var(--accent); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+           gap: .5rem; padding: .7rem; }
+
+  .card { border: 1px solid; border-radius: 6px; padding: .5rem .6rem; color: #111827;
+          display: flex; flex-direction: column; gap: .35rem; }
+  .card[hidden] { display: none; }
+  .card.must { background: var(--must-bg); border-color: var(--must-br); }
+  .card.should { background: var(--should-bg); border-color: var(--should-br); }
+  .card.could { background: var(--could-bg); border-color: var(--could-br); }
+  .card.wont { background: var(--wont-bg); border-color: var(--wont-br); }
+  .card.tts { border-width: 3px; }
+  @media (prefers-color-scheme: dark) { .card { color: var(--fg); } }
+  .card h3 { font-size: .87rem; margin: 0; font-weight: 600; line-height: 1.3; }
+  .card-meta { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+  .card .key { font-size: .76rem; font-weight: 600; text-decoration: none; }
+  .card .chip { font-size: .7rem; padding: .05rem .35rem; border-radius: 999px;
+                background: rgba(127,127,127,.18); }
+  .card .slug { font-size: .68rem; opacity: .65; word-break: break-all; }
+
+  @media print {
+    .toolbar, .zoom { display: none; }
+    body { padding: 0; }
+    .viewport { height: auto; overflow: visible; }
+    .cards { grid-template-columns: repeat(3, 1fr); }
+  }
+</style></head>
+<body>
+<header>
+  <h1>Embedded-Core Epic Dependency DAG</h1>
+  <div class="stats">
+    <span>87 epics &middot; 9 capabilities &middot; 0 hard + 0 soft edges</span>
+    <span>generated 2026-08-18 20:00 UTC</span>
+    <span><a href="https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1" target="_blank" rel="noopener">open tracker &#8599;</a></span>
+  </div>
+  <div class="legend">
+    <span class="lg-must">Must</span><span class="lg-should">Should</span>
+    <span class="lg-could">Could</span><span class="lg-wont">Won't</span>
+    <span class="lg-tts">bold border = 2TS required</span>
+  </div>
+  <div class="stats" style="margin-top:.4rem">
+    <span>solid arrow = hard blocker &middot; dashed arrow = soft blocker &middot;
+          edge points blocker &rarr; dependent</span>
+  </div>
+  
+</header>
+
+<div class="toolbar">
+  <input id="q" type="search" placeholder="Search title, Jira key, or epic id" autocomplete="off">
+  <select id="f-capability"><option value="">All capabilities</option><option value="motion-authorization">CAP-01 - Motion Authorization</option><option value="obstacle-detection-and-avoidance">CAP-02 - Obstacle Detection and Avoidance</option><option value="path-execution-and-objectives-translation">CAP-03 - Path Execution and Objectives Translation</option><option value="remote-all-stop-safety-capability">CAP-04 - Remote/All Stop Safety Capability</option><option value="vehicle-kinematics-support">CAP-05 - Vehicle Kinematics Support</option><option value="blackbox-data-off-load-to-cloud">CAP-06 - Blackbox Data Off-load to Cloud</option><option value="framework-packaging-extension-and-integration">CAP-07 - Path-to-Actuation Framework Packaging, Extension, and Integration</option><option value="tele-operation">CAP-08 - Tele-operation</option><option value="observable-runtime-state">CAP-09 - Observable Runtime State</option></select>
+  <select id="f-priority">
+    <option value="">All priorities</option>
+    <option>Must Have</option><option>Should Have</option>
+    <option>Could Have</option><option>Will Not Have</option>
+  </select>
+  <select id="f-tts">
+    <option value="">2TS: any</option>
+    <option value="Yes">2TS: Yes</option>
+    <option value="No">2TS: No</option>
+    <option value="TBD">2TS: TBD</option>
+  </select>
+  <button type="button" id="reset">Reset</button>
+  <button type="button" id="home" hidden>&larr; All capabilities</button>
+  <span id="count"></span>
+</div>
+
+<h2>Dependency graph <span class="muted">0 of 87 epics have dependencies</span></h2>
+<div class="empty">
+  <p><strong>No dependencies recorded yet.</strong></p>
+  <p>Every epic below is currently unblocked. Edges appear here as soon as the
+     tracker's <strong>Blocking Epics</strong> column is filled in during the
+     evaluation meetings - list the epics that must finish first, tagged
+     <code>(hard)</code> or <code>(soft)</code>, then re-run the generator.</p>
+</div>
+
+<h2>Epic inventory <span class="muted" id="inv-caption"></span></h2>
+<div id="overview"><div class="tiles">
+  <button type="button" class="tile" data-capability="motion-authorization">
+    <div class="tile-head"><span class="tile-code">CAP-01</span><span class="tile-n">10 epics</span></div>
+    <h3>Motion Authorization</h3>
+    <div class="cap">capreq-motion-authorization</div>
+    <div class="bars"><span class="bar must" style="flex:10" title="10 Must Have"></span></div>
+    <div class="tile-meta"><span class="chip">10 Must</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="obstacle-detection-and-avoidance">
+    <div class="tile-head"><span class="tile-code">CAP-02</span><span class="tile-n">1 epic</span></div>
+    <h3>Obstacle Detection and Avoidance</h3>
+    <div class="cap">capreq-obstacle-detection-and-avoidance</div>
+    <div class="bars"><span class="bar must" style="flex:1" title="1 Must Have"></span></div>
+    <div class="tile-meta"><span class="chip">1 Must</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="path-execution-and-objectives-translation">
+    <div class="tile-head"><span class="tile-code">CAP-03</span><span class="tile-n">12 epics</span></div>
+    <h3>Path Execution and Objectives Translation</h3>
+    <div class="cap">capreq-path-execution-and-objectives-translation</div>
+    <div class="bars"><span class="bar must" style="flex:4" title="4 Must Have"></span><span class="bar should" style="flex:8" title="8 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">4 Must</span><span class="chip">8 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="remote-all-stop-safety-capability">
+    <div class="tile-head"><span class="tile-code">CAP-04</span><span class="tile-n">17 epics</span></div>
+    <h3>Remote/All Stop Safety Capability</h3>
+    <div class="cap">capreq-remote-all-stop-safety-capability</div>
+    <div class="bars"><span class="bar must" style="flex:10" title="10 Must Have"></span><span class="bar should" style="flex:7" title="7 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">10 Must</span><span class="chip">7 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="vehicle-kinematics-support">
+    <div class="tile-head"><span class="tile-code">CAP-05</span><span class="tile-n">5 epics</span></div>
+    <h3>Vehicle Kinematics Support</h3>
+    <div class="cap">capreq-vehicle-kinematics-support</div>
+    <div class="bars"><span class="bar must" style="flex:1" title="1 Must Have"></span><span class="bar should" style="flex:4" title="4 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">1 Must</span><span class="chip">4 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="blackbox-data-off-load-to-cloud">
+    <div class="tile-head"><span class="tile-code">CAP-06</span><span class="tile-n">22 epics</span></div>
+    <h3>Blackbox Data Off-load to Cloud</h3>
+    <div class="cap">capreq-blackbox-data-off-load-to-cloud</div>
+    <div class="bars"><span class="bar should" style="flex:19" title="19 Should Have"></span><span class="bar could" style="flex:3" title="3 Could Have"></span></div>
+    <div class="tile-meta"><span class="chip">19 Should</span><span class="chip">3 Could</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="framework-packaging-extension-and-integration">
+    <div class="tile-head"><span class="tile-code">CAP-07</span><span class="tile-n">8 epics</span></div>
+    <h3>Path-to-Actuation Framework Packaging, Extension, and Integration</h3>
+    <div class="cap">capreq-framework-packaging-extension-and-integration</div>
+    <div class="bars"><span class="bar should" style="flex:8" title="8 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">8 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="tele-operation">
+    <div class="tile-head"><span class="tile-code">CAP-08</span><span class="tile-n">11 epics</span></div>
+    <h3>Tele-operation</h3>
+    <div class="cap">capreq-tele-operation</div>
+    <div class="bars"><span class="bar must" style="flex:5" title="5 Must Have"></span><span class="bar should" style="flex:6" title="6 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">5 Must</span><span class="chip">6 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="observable-runtime-state">
+    <div class="tile-head"><span class="tile-code">CAP-09</span><span class="tile-n">1 epic</span></div>
+    <h3>Observable Runtime State</h3>
+    <div class="cap">capreq-observable-runtime-state</div>
+    <div class="bars"><span class="bar must" style="flex:1" title="1 Must Have"></span></div>
+    <div class="tile-meta"><span class="chip">1 Must</span><span class="chip">0 2TS</span></div>
+  </button>
+</div></div>
+<div id="details"><section class="cap-detail" hidden data-capability="motion-authorization">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Motion Authorization</h3><code class="detail-code">CAP-01</code><span class="detail-n">10 epics</span></div>
+    <div class="cap">capreq-motion-authorization</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-confirm-estop-clear">
+      <h3>Confirm E-Stop State Clear</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-134" target="_blank" rel="noopener">MCHTRNCS-134</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-confirm-estop-clear</code>
+    </article>
+    <article class="card must" data-epic="epic-confirm-stop-capability">
+      <h3>Confirm Stop-Capability Operational</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-139" target="_blank" rel="noopener">MCHTRNCS-139</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-confirm-stop-capability</code>
+    </article>
+    <article class="card must" data-epic="epic-confirm-valid-path-plan-present">
+      <h3>Confirm Valid Path Plan Present</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-135" target="_blank" rel="noopener">MCHTRNCS-135</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-confirm-valid-path-plan-present</code>
+    </article>
+    <article class="card must" data-epic="epic-continuous-geofence-enforcement">
+      <h3>Continuous Geofence Enforcement</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-269" target="_blank" rel="noopener">MCHTRNCS-269</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-continuous-geofence-enforcement</code>
+    </article>
+    <article class="card must" data-epic="epic-gate-continuous-motion-authorization">
+      <h3>Continuously Gate Motion Authorization</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-141" target="_blank" rel="noopener">MCHTRNCS-141</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-gate-continuous-motion-authorization</code>
+    </article>
+    <article class="card must" data-epic="epic-evaluate-vehicle-state-conditions">
+      <h3>Evaluate Vehicle-State Safe-to-Move Conditions</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-195" target="_blank" rel="noopener">MCHTRNCS-195</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-evaluate-vehicle-state-conditions</code>
+    </article>
+    <article class="card must" data-epic="epic-geofence-map-validation">
+      <h3>Geofence Map Validation</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-270" target="_blank" rel="noopener">MCHTRNCS-270</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-geofence-map-validation</code>
+    </article>
+    <article class="card must" data-epic="epic-prohibited-transition-guard">
+      <h3>Guard Against Prohibited Motion Transitions</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-203" target="_blank" rel="noopener">MCHTRNCS-203</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-prohibited-transition-guard</code>
+    </article>
+    <article class="card must" data-epic="epic-safe-state-transition-on-auth-loss">
+      <h3>Transition to Safe State on Authorization Loss</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-142" target="_blank" rel="noopener">MCHTRNCS-142</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-safe-state-transition-on-auth-loss</code>
+    </article>
+    <article class="card must" data-epic="epic-withhold-motion-until-recovery-authorized">
+      <h3>Withhold Motion Until Authorized Recovery</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-130" target="_blank" rel="noopener">MCHTRNCS-130</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-withhold-motion-until-recovery-authorized</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="obstacle-detection-and-avoidance">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Obstacle Detection and Avoidance</h3><code class="detail-code">CAP-02</code><span class="detail-n">1 epic</span></div>
+    <div class="cap">capreq-obstacle-detection-and-avoidance</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-emit-obstacle-stop-avoidance">
+      <h3>Emit Obstacle Stop or Avoidance Actuation</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-200" target="_blank" rel="noopener">MCHTRNCS-200</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-emit-obstacle-stop-avoidance</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="path-execution-and-objectives-translation">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Path Execution and Objectives Translation</h3><code class="detail-code">CAP-03</code><span class="detail-n">12 epics</span></div>
+    <div class="cap">capreq-path-execution-and-objectives-translation</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-cancel-command-response">
+      <h3>Cancel Command Response</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-271" target="_blank" rel="noopener">MCHTRNCS-271</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-cancel-command-response</code>
+    </article>
+    <article class="card must" data-epic="epic-stop-on-execution-fault">
+      <h3>Stop on Execution Fault or Obstacle</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-205" target="_blank" rel="noopener">MCHTRNCS-205</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-stop-on-execution-fault</code>
+    </article>
+    <article class="card must" data-epic="epic-stop-on-heading-overshoot">
+      <h3>Stop on Heading Overshoot During Turn-In-Place</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-206" target="_blank" rel="noopener">MCHTRNCS-206</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-stop-on-heading-overshoot</code>
+    </article>
+    <article class="card must" data-epic="epic-stop-on-path-deviation">
+      <h3>Stop on Path Deviation</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-207" target="_blank" rel="noopener">MCHTRNCS-207</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-stop-on-path-deviation</code>
+    </article>
+    <article class="card should" data-epic="epic-structured-map-conformance">
+      <h3>Conform to Structured-Map Rules During Execution</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-197" target="_blank" rel="noopener">MCHTRNCS-197</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-structured-map-conformance</code>
+    </article>
+    <article class="card should" data-epic="epic-execute-path-with-motion-limits">
+      <h3>Execute Path Within Motion Limits</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-202" target="_blank" rel="noopener">MCHTRNCS-202</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-execute-path-with-motion-limits</code>
+    </article>
+    <article class="card should" data-epic="epic-objective-progress-updates">
+      <h3>Objective Progress Updates</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-272" target="_blank" rel="noopener">MCHTRNCS-272</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-objective-progress-updates</code>
+    </article>
+    <article class="card should" data-epic="epic-objectives-reception">
+      <h3>Objectives Reception</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-273" target="_blank" rel="noopener">MCHTRNCS-273</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-objectives-reception</code>
+    </article>
+    <article class="card should" data-epic="epic-report-supported-objectives">
+      <h3>Report Supported Objectives</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-274" target="_blank" rel="noopener">MCHTRNCS-274</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-report-supported-objectives</code>
+    </article>
+    <article class="card should" data-epic="epic-sequential-objective-execution">
+      <h3>Sequential Objective Execution</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-275" target="_blank" rel="noopener">MCHTRNCS-275</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-sequential-objective-execution</code>
+    </article>
+    <article class="card should" data-epic="epic-turn-in-place-heading-accuracy">
+      <h3>Turn-In-Place Heading Accuracy</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-208" target="_blank" rel="noopener">MCHTRNCS-208</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-turn-in-place-heading-accuracy</code>
+    </article>
+    <article class="card should" data-epic="epic-validate-supplied-path">
+      <h3>Validate Supplied Path Before Execution</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-209" target="_blank" rel="noopener">MCHTRNCS-209</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-validate-supplied-path</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="remote-all-stop-safety-capability">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Remote/All Stop Safety Capability</h3><code class="detail-code">CAP-04</code><span class="detail-n">17 epics</span></div>
+    <div class="cap">capreq-remote-all-stop-safety-capability</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-all-stop-continuous-monitor">
+      <h3>All Stop Continuous Communication Monitor</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-220" target="_blank" rel="noopener">MCHTRNCS-220</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-all-stop-continuous-monitor</code>
+    </article>
+    <article class="card must" data-epic="epic-all-stop-in-every-build">
+      <h3>All Stop Included in Every Build</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-221" target="_blank" rel="noopener">MCHTRNCS-221</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-all-stop-in-every-build</code>
+    </article>
+    <article class="card must" data-epic="epic-all-stop-readiness-on-comm">
+      <h3>All Stop Readiness Gated on External-Source Communication</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-223" target="_blank" rel="noopener">MCHTRNCS-223</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-all-stop-readiness-on-comm</code>
+    </article>
+    <article class="card must" data-epic="epic-all-stop-failed-event-fault-log">
+      <h3>Fault Log on Failed All Stop Event Publish</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-226" target="_blank" rel="noopener">MCHTRNCS-226</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-all-stop-failed-event-fault-log</code>
+    </article>
+    <article class="card must" data-epic="epic-immediate-stop-on-stop-command">
+      <h3>Immediate Stop on Stop Command</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-276" target="_blank" rel="noopener">MCHTRNCS-276</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-immediate-stop-on-stop-command</code>
+    </article>
+    <article class="card must" data-epic="epic-reject-all-stop-init-when-remote-stop">
+      <h3>Reject All Stop Initialization When Remote Stop Active</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-228" target="_blank" rel="noopener">MCHTRNCS-228</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-reject-all-stop-init-when-remote-stop</code>
+    </article>
+    <article class="card must" data-epic="epic-reject-remote-stop-init-when-all-stop">
+      <h3>Reject Remote Stop Initialization When All Stop Active</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-229" target="_blank" rel="noopener">MCHTRNCS-229</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-reject-remote-stop-init-when-all-stop</code>
+    </article>
+    <article class="card must" data-epic="epic-stop-command-processing-100ms">
+      <h3>Stop Command Processing Within 100 ms</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-231" target="_blank" rel="noopener">MCHTRNCS-231</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-stop-command-processing-100ms</code>
+    </article>
+    <article class="card must" data-epic="epic-stop-command-on-all-stop-100ms">
+      <h3>Stop Command Within 100 ms on All Stop or Comm Loss</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-232" target="_blank" rel="noopener">MCHTRNCS-232</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-stop-command-on-all-stop-100ms</code>
+    </article>
+    <article class="card must" data-epic="epic-subscribe-all-stop-broadcaster">
+      <h3>Subscribe to All Stop Broadcaster</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-234" target="_blank" rel="noopener">MCHTRNCS-234</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-subscribe-all-stop-broadcaster</code>
+    </article>
+    <article class="card should" data-epic="epic-active-stop-mode-query">
+      <h3>Active Stop Mode Query Interface</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-219" target="_blank" rel="noopener">MCHTRNCS-219</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-active-stop-mode-query</code>
+    </article>
+    <article class="card should" data-epic="epic-all-stop-interface">
+      <h3>All Stop Initialization and Start Interface</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-222" target="_blank" rel="noopener">MCHTRNCS-222</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-all-stop-interface</code>
+    </article>
+    <article class="card should" data-epic="epic-cat1-stop-when-no-remote-stop-source">
+      <h3>Cat1 Stop When No Remote Stop Source</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-224" target="_blank" rel="noopener">MCHTRNCS-224</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-cat1-stop-when-no-remote-stop-source</code>
+    </article>
+    <article class="card should" data-epic="epic-comm-loss-log">
+      <h3>Communication Loss Log</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-225" target="_blank" rel="noopener">MCHTRNCS-225</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-comm-loss-log</code>
+    </article>
+    <article class="card should" data-epic="epic-no-comm-loss-during-startup">
+      <h3>No Communication-Loss Declaration During Startup</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-227" target="_blank" rel="noopener">MCHTRNCS-227</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-no-comm-loss-during-startup</code>
+    </article>
+    <article class="card should" data-epic="epic-one-active-stop-mode">
+      <h3>Single Active Stop Mode</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-230" target="_blank" rel="noopener">MCHTRNCS-230</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-one-active-stop-mode</code>
+    </article>
+    <article class="card should" data-epic="epic-stop-event-root-cause">
+      <h3>Stop Event Root-Cause Distinction</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-233" target="_blank" rel="noopener">MCHTRNCS-233</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-stop-event-root-cause</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="vehicle-kinematics-support">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Vehicle Kinematics Support</h3><code class="detail-code">CAP-05</code><span class="detail-n">5 epics</span></div>
+    <div class="cap">capreq-vehicle-kinematics-support</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-differential-drive-linear-speed-validity">
+      <h3>Differential-Drive Robot Linear Speed Validity</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-247" target="_blank" rel="noopener">MCHTRNCS-247</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-differential-drive-linear-speed-validity</code>
+    </article>
+    <article class="card should" data-epic="epic-differential-drive-linear-speed">
+      <h3>Differential-Drive Robot Linear Speed</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-246" target="_blank" rel="noopener">MCHTRNCS-246</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-differential-drive-linear-speed</code>
+    </article>
+    <article class="card should" data-epic="epic-support-acumen-vehicles">
+      <h3>Support Acumen Vehicles</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-240" target="_blank" rel="noopener">MCHTRNCS-240</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-support-acumen-vehicles</code>
+    </article>
+    <article class="card should" data-epic="epic-support-articulated-vehicles">
+      <h3>Support Articulated Vehicles</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-241" target="_blank" rel="noopener">MCHTRNCS-241</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-support-articulated-vehicles</code>
+    </article>
+    <article class="card should" data-epic="epic-support-differential-drive-vehicles">
+      <h3>Support Differential-Drive Vehicles</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-242" target="_blank" rel="noopener">MCHTRNCS-242</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-support-differential-drive-vehicles</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="blackbox-data-off-load-to-cloud">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Blackbox Data Off-load to Cloud</h3><code class="detail-code">CAP-06</code><span class="detail-n">22 epics</span></div>
+    <div class="cap">capreq-blackbox-data-off-load-to-cloud</div>
+  </div>
+  <div class="cards">
+    <article class="card should" data-epic="epic-auto-enqueue-on-event">
+      <h3>Auto-Enqueue Off-load on Event of Interest</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-278" target="_blank" rel="noopener">MCHTRNCS-278</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-auto-enqueue-on-event</code>
+    </article>
+    <article class="card should" data-epic="epic-clean-up-staged-copies">
+      <h3>Clean Up Staged Copies on Transfer and Finalize</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-279" target="_blank" rel="noopener">MCHTRNCS-279</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-clean-up-staged-copies</code>
+    </article>
+    <article class="card should" data-epic="epic-destination-agnostic-transfer">
+      <h3>Destination-Agnostic Transfer</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-280" target="_blank" rel="noopener">MCHTRNCS-280</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-destination-agnostic-transfer</code>
+    </article>
+    <article class="card should" data-epic="epic-disk-pressure-diagnostic">
+      <h3>Disk-Pressure Diagnostic to Safety Management Unit</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-281" target="_blank" rel="noopener">MCHTRNCS-281</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-disk-pressure-diagnostic</code>
+    </article>
+    <article class="card should" data-epic="epic-emit-dataset-metadata">
+      <h3>Emit Data-Set Placement and Metadata Descriptor</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-282" target="_blank" rel="noopener">MCHTRNCS-282</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-emit-dataset-metadata</code>
+    </article>
+    <article class="card should" data-epic="epic-evaluate-per-dataset-gates">
+      <h3>Evaluate Per-Data-Set Gate Policy</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-283" target="_blank" rel="noopener">MCHTRNCS-283</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-evaluate-per-dataset-gates</code>
+    </article>
+    <article class="card should" data-epic="epic-finalize-completion-state">
+      <h3>Finalize Data-Set Completion State</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-285" target="_blank" rel="noopener">MCHTRNCS-285</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-finalize-completion-state</code>
+    </article>
+    <article class="card should" data-epic="epic-gather-selected-windows">
+      <h3>Gather Only Selected Windows</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-286" target="_blank" rel="noopener">MCHTRNCS-286</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-gather-selected-windows</code>
+    </article>
+    <article class="card should" data-epic="epic-ingest-placement-and-enable">
+      <h3>Ingest Placement, Address, and Enable from C2</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-287" target="_blank" rel="noopener">MCHTRNCS-287</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-ingest-placement-and-enable</code>
+    </article>
+    <article class="card should" data-epic="epic-merge-time-synchronized">
+      <h3>Merge into a Time-Synchronized Self-Contained Set</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-288" target="_blank" rel="noopener">MCHTRNCS-288</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-merge-time-synchronized</code>
+    </article>
+    <article class="card should" data-epic="epic-preserve-serialization">
+      <h3>Preserve Serialization and Native Formats</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-289" target="_blank" rel="noopener">MCHTRNCS-289</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-preserve-serialization</code>
+    </article>
+    <article class="card should" data-epic="epic-priority-ordering">
+      <h3>Priority Ordering of Off-load and Eviction</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-290" target="_blank" rel="noopener">MCHTRNCS-290</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-priority-ordering</code>
+    </article>
+    <article class="card should" data-epic="epic-provide-gate-criteria">
+      <h3>Provide Readiness Gate Criteria</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-291" target="_blank" rel="noopener">MCHTRNCS-291</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-provide-gate-criteria</code>
+    </article>
+    <article class="card should" data-epic="epic-release-queue-after-staging">
+      <h3>Release Queued State Once Staged</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-292" target="_blank" rel="noopener">MCHTRNCS-292</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-release-queue-after-staging</code>
+    </article>
+    <article class="card should" data-epic="epic-restore-queue-state-on-startup">
+      <h3>Restore Queue State Before Eviction on Startup</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-294" target="_blank" rel="noopener">MCHTRNCS-294</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-restore-queue-state-on-startup</code>
+    </article>
+    <article class="card should" data-epic="epic-resume-transfer-across-restart">
+      <h3>Resume Transfer Across Interruptions and Restarts</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-295" target="_blank" rel="noopener">MCHTRNCS-295</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-resume-transfer-across-restart</code>
+    </article>
+    <article class="card should" data-epic="epic-skip-queued-in-fifo">
+      <h3>Skip Queued Files in FIFO Eviction</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-296" target="_blank" rel="noopener">MCHTRNCS-296</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-skip-queued-in-fifo</code>
+    </article>
+    <article class="card should" data-epic="epic-stage-prepared-dataset">
+      <h3>Stage Prepared Data Set for Transfer</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-297" target="_blank" rel="noopener">MCHTRNCS-297</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-stage-prepared-dataset</code>
+    </article>
+    <article class="card should" data-epic="epic-verify-file-integrity">
+      <h3>Verify Per-File Transfer Integrity</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-298" target="_blank" rel="noopener">MCHTRNCS-298</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-verify-file-integrity</code>
+    </article>
+    <article class="card could" data-epic="epic-accept-manual-request">
+      <h3>Accept Manual Off-load Request</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-277" target="_blank" rel="noopener">MCHTRNCS-277</a><span class="chip">Could Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-accept-manual-request</code>
+    </article>
+    <article class="card could" data-epic="epic-extract-to-media">
+      <h3>Extract Prepared Data Set to Physical Media</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-284" target="_blank" rel="noopener">MCHTRNCS-284</a><span class="chip">Could Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-extract-to-media</code>
+    </article>
+    <article class="card could" data-epic="epic-report-offload-state">
+      <h3>Report Off-load State via Diagnostics</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-293" target="_blank" rel="noopener">MCHTRNCS-293</a><span class="chip">Could Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-report-offload-state</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="framework-packaging-extension-and-integration">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Path-to-Actuation Framework Packaging, Extension, and Integration</h3><code class="detail-code">CAP-07</code><span class="detail-n">8 epics</span></div>
+    <div class="cap">capreq-framework-packaging-extension-and-integration</div>
+  </div>
+  <div class="cards">
+    <article class="card should" data-epic="epic-api-versioning-and-training">
+      <h3>API Versioning, Migration Guidance, and Integration Training</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-183" target="_blank" rel="noopener">MCHTRNCS-183</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-api-versioning-and-training</code>
+    </article>
+    <article class="card should" data-epic="epic-configurable-kinematic-and-io-interfaces">
+      <h3>Configurable Kinematic Model and Actuator/Sensor Interfaces</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-217" target="_blank" rel="noopener">MCHTRNCS-217</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-configurable-kinematic-and-io-interfaces</code>
+    </article>
+    <article class="card should" data-epic="epic-consistent-runtime-icd">
+      <h3>Consistent Runtime ICD to Command and Control</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-299" target="_blank" rel="noopener">MCHTRNCS-299</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-consistent-runtime-icd</code>
+    </article>
+    <article class="card should" data-epic="epic-documented-extension-points">
+      <h3>Documented Framework Extension Points</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-185" target="_blank" rel="noopener">MCHTRNCS-185</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-documented-extension-points</code>
+    </article>
+    <article class="card should" data-epic="epic-framework-verification-support">
+      <h3>Framework Verification Support</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-184" target="_blank" rel="noopener">MCHTRNCS-184</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-framework-verification-support</code>
+    </article>
+    <article class="card should" data-epic="epic-integrable-framework-for-oem-vehicle-platforms">
+      <h3>Integrable Framework for OEM Vehicle Platforms</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-300" target="_blank" rel="noopener">MCHTRNCS-300</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-integrable-framework-for-oem-vehicle-platforms</code>
+    </article>
+    <article class="card should" data-epic="epic-publish-framework-distribution-forms">
+      <h3>Publish Framework Distribution Forms and Interface Contracts</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-218" target="_blank" rel="noopener">MCHTRNCS-218</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-publish-framework-distribution-forms</code>
+    </article>
+    <article class="card should" data-epic="epic-separate-teleop-icd">
+      <h3>Separate Tele-op ICD to Tele-op Controllers</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-301" target="_blank" rel="noopener">MCHTRNCS-301</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-separate-teleop-icd</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="tele-operation">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Tele-operation</h3><code class="detail-code">CAP-08</code><span class="detail-n">11 epics</span></div>
+    <div class="cap">capreq-tele-operation</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-tele-op-command-authorization-within-limits">
+      <h3>Tele-op Command Authorization Within Limits</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-302" target="_blank" rel="noopener">MCHTRNCS-302</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-tele-op-command-authorization-within-limits</code>
+    </article>
+    <article class="card must" data-epic="epic-teleop-connection-loss-safe-behavior">
+      <h3>Tele-op Connection-Loss Safe Behavior</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-212" target="_blank" rel="noopener">MCHTRNCS-212</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-teleop-connection-loss-safe-behavior</code>
+    </article>
+    <article class="card must" data-epic="epic-tele-op-exclusive-control">
+      <h3>Tele-op Exclusive Control</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-304" target="_blank" rel="noopener">MCHTRNCS-304</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-tele-op-exclusive-control</code>
+    </article>
+    <article class="card must" data-epic="epic-teleop-motion-limit-conformance">
+      <h3>Tele-op Motion-Limit and Geofence Conformance</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-214" target="_blank" rel="noopener">MCHTRNCS-214</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-teleop-motion-limit-conformance</code>
+    </article>
+    <article class="card must" data-epic="epic-teleop-network-timeout-estop">
+      <h3>Tele-op Network-Timeout Emergency Stop</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-215" target="_blank" rel="noopener">MCHTRNCS-215</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-teleop-network-timeout-estop</code>
+    </article>
+    <article class="card should" data-epic="epic-gate-teleop-session-on-motion-auth">
+      <h3>Gate Tele-op Session on Motion Authorization</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-210" target="_blank" rel="noopener">MCHTRNCS-210</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-gate-teleop-session-on-motion-auth</code>
+    </article>
+    <article class="card should" data-epic="epic-tele-op-control-command-latency">
+      <h3>Tele-op Control Command Latency</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-303" target="_blank" rel="noopener">MCHTRNCS-303</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-tele-op-control-command-latency</code>
+    </article>
+    <article class="card should" data-epic="epic-tele-op-full-operator-control">
+      <h3>Tele-op Full Operator Control</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-305" target="_blank" rel="noopener">MCHTRNCS-305</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-tele-op-full-operator-control</code>
+    </article>
+    <article class="card should" data-epic="epic-teleop-input-staleness-timeout">
+      <h3>Tele-op Input Staleness Timeout</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-213" target="_blank" rel="noopener">MCHTRNCS-213</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-teleop-input-staleness-timeout</code>
+    </article>
+    <article class="card should" data-epic="epic-teleop-link-loss-integrator-notification">
+      <h3>Tele-op Link-Loss Integrator Notification</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-306" target="_blank" rel="noopener">MCHTRNCS-306</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-teleop-link-loss-integrator-notification</code>
+    </article>
+    <article class="card should" data-epic="epic-translate-teleop-input-to-actuation">
+      <h3>Translate Tele-op Input to Actuation</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-216" target="_blank" rel="noopener">MCHTRNCS-216</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-translate-teleop-input-to-actuation</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="observable-runtime-state">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Observable Runtime State</h3><code class="detail-code">CAP-09</code><span class="detail-n">1 epic</span></div>
+    <div class="cap">capreq-observable-runtime-state</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-detect-path-deviations-violations">
+      <h3>Detect Path Deviations and Rule Violations</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/MCHTRNCS-199" target="_blank" rel="noopener">MCHTRNCS-199</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-detect-path-deviations-violations</code>
+    </article>
+  </div>
+</section></div>
+
+<script id="epic-data" type="application/json">[{"epic": "epic-accept-manual-request", "nid": "n_epic_accept_manual_request", "key": "MCHTRNCS-277", "title": "Accept Manual Off-load Request", "capability": "blackbox-data-off-load-to-cloud", "priority": "Could Have", "tts": "TBD"}, {"epic": "epic-active-stop-mode-query", "nid": "n_epic_active_stop_mode_query", "key": "MCHTRNCS-219", "title": "Active Stop Mode Query Interface", "capability": "remote-all-stop-safety-capability", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-all-stop-continuous-monitor", "nid": "n_epic_all_stop_continuous_monitor", "key": "MCHTRNCS-220", "title": "All Stop Continuous Communication Monitor", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-all-stop-failed-event-fault-log", "nid": "n_epic_all_stop_failed_event_fault_log", "key": "MCHTRNCS-226", "title": "Fault Log on Failed All Stop Event Publish", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-all-stop-in-every-build", "nid": "n_epic_all_stop_in_every_build", "key": "MCHTRNCS-221", "title": "All Stop Included in Every Build", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-all-stop-interface", "nid": "n_epic_all_stop_interface", "key": "MCHTRNCS-222", "title": "All Stop Initialization and Start Interface", "capability": "remote-all-stop-safety-capability", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-all-stop-readiness-on-comm", "nid": "n_epic_all_stop_readiness_on_comm", "key": "MCHTRNCS-223", "title": "All Stop Readiness Gated on External-Source Communication", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-api-versioning-and-training", "nid": "n_epic_api_versioning_and_training", "key": "MCHTRNCS-183", "title": "API Versioning, Migration Guidance, and Integration Training", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-auto-enqueue-on-event", "nid": "n_epic_auto_enqueue_on_event", "key": "MCHTRNCS-278", "title": "Auto-Enqueue Off-load on Event of Interest", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-cancel-command-response", "nid": "n_epic_cancel_command_response", "key": "MCHTRNCS-271", "title": "Cancel Command Response", "capability": "path-execution-and-objectives-translation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-cat1-stop-when-no-remote-stop-source", "nid": "n_epic_cat1_stop_when_no_remote_stop_source", "key": "MCHTRNCS-224", "title": "Cat1 Stop When No Remote Stop Source", "capability": "remote-all-stop-safety-capability", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-clean-up-staged-copies", "nid": "n_epic_clean_up_staged_copies", "key": "MCHTRNCS-279", "title": "Clean Up Staged Copies on Transfer and Finalize", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-comm-loss-log", "nid": "n_epic_comm_loss_log", "key": "MCHTRNCS-225", "title": "Communication Loss Log", "capability": "remote-all-stop-safety-capability", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-configurable-kinematic-and-io-interfaces", "nid": "n_epic_configurable_kinematic_and_io_interfaces", "key": "MCHTRNCS-217", "title": "Configurable Kinematic Model and Actuator/Sensor Interfaces", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-confirm-estop-clear", "nid": "n_epic_confirm_estop_clear", "key": "MCHTRNCS-134", "title": "Confirm E-Stop State Clear", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-confirm-stop-capability", "nid": "n_epic_confirm_stop_capability", "key": "MCHTRNCS-139", "title": "Confirm Stop-Capability Operational", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-confirm-valid-path-plan-present", "nid": "n_epic_confirm_valid_path_plan_present", "key": "MCHTRNCS-135", "title": "Confirm Valid Path Plan Present", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-consistent-runtime-icd", "nid": "n_epic_consistent_runtime_icd", "key": "MCHTRNCS-299", "title": "Consistent Runtime ICD to Command and Control", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-continuous-geofence-enforcement", "nid": "n_epic_continuous_geofence_enforcement", "key": "MCHTRNCS-269", "title": "Continuous Geofence Enforcement", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-destination-agnostic-transfer", "nid": "n_epic_destination_agnostic_transfer", "key": "MCHTRNCS-280", "title": "Destination-Agnostic Transfer", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-detect-path-deviations-violations", "nid": "n_epic_detect_path_deviations_violations", "key": "MCHTRNCS-199", "title": "Detect Path Deviations and Rule Violations", "capability": "observable-runtime-state", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-differential-drive-linear-speed", "nid": "n_epic_differential_drive_linear_speed", "key": "MCHTRNCS-246", "title": "Differential-Drive Robot Linear Speed", "capability": "vehicle-kinematics-support", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-differential-drive-linear-speed-validity", "nid": "n_epic_differential_drive_linear_speed_validity", "key": "MCHTRNCS-247", "title": "Differential-Drive Robot Linear Speed Validity", "capability": "vehicle-kinematics-support", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-disk-pressure-diagnostic", "nid": "n_epic_disk_pressure_diagnostic", "key": "MCHTRNCS-281", "title": "Disk-Pressure Diagnostic to Safety Management Unit", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-documented-extension-points", "nid": "n_epic_documented_extension_points", "key": "MCHTRNCS-185", "title": "Documented Framework Extension Points", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-emit-dataset-metadata", "nid": "n_epic_emit_dataset_metadata", "key": "MCHTRNCS-282", "title": "Emit Data-Set Placement and Metadata Descriptor", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-emit-obstacle-stop-avoidance", "nid": "n_epic_emit_obstacle_stop_avoidance", "key": "MCHTRNCS-200", "title": "Emit Obstacle Stop or Avoidance Actuation", "capability": "obstacle-detection-and-avoidance", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-evaluate-per-dataset-gates", "nid": "n_epic_evaluate_per_dataset_gates", "key": "MCHTRNCS-283", "title": "Evaluate Per-Data-Set Gate Policy", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-evaluate-vehicle-state-conditions", "nid": "n_epic_evaluate_vehicle_state_conditions", "key": "MCHTRNCS-195", "title": "Evaluate Vehicle-State Safe-to-Move Conditions", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-execute-path-with-motion-limits", "nid": "n_epic_execute_path_with_motion_limits", "key": "MCHTRNCS-202", "title": "Execute Path Within Motion Limits", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-extract-to-media", "nid": "n_epic_extract_to_media", "key": "MCHTRNCS-284", "title": "Extract Prepared Data Set to Physical Media", "capability": "blackbox-data-off-load-to-cloud", "priority": "Could Have", "tts": "TBD"}, {"epic": "epic-finalize-completion-state", "nid": "n_epic_finalize_completion_state", "key": "MCHTRNCS-285", "title": "Finalize Data-Set Completion State", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-framework-verification-support", "nid": "n_epic_framework_verification_support", "key": "MCHTRNCS-184", "title": "Framework Verification Support", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-gate-continuous-motion-authorization", "nid": "n_epic_gate_continuous_motion_authorization", "key": "MCHTRNCS-141", "title": "Continuously Gate Motion Authorization", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-gate-teleop-session-on-motion-auth", "nid": "n_epic_gate_teleop_session_on_motion_auth", "key": "MCHTRNCS-210", "title": "Gate Tele-op Session on Motion Authorization", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-gather-selected-windows", "nid": "n_epic_gather_selected_windows", "key": "MCHTRNCS-286", "title": "Gather Only Selected Windows", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-geofence-map-validation", "nid": "n_epic_geofence_map_validation", "key": "MCHTRNCS-270", "title": "Geofence Map Validation", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-immediate-stop-on-stop-command", "nid": "n_epic_immediate_stop_on_stop_command", "key": "MCHTRNCS-276", "title": "Immediate Stop on Stop Command", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-ingest-placement-and-enable", "nid": "n_epic_ingest_placement_and_enable", "key": "MCHTRNCS-287", "title": "Ingest Placement, Address, and Enable from C2", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-integrable-framework-for-oem-vehicle-platforms", "nid": "n_epic_integrable_framework_for_oem_vehicle_platforms", "key": "MCHTRNCS-300", "title": "Integrable Framework for OEM Vehicle Platforms", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-merge-time-synchronized", "nid": "n_epic_merge_time_synchronized", "key": "MCHTRNCS-288", "title": "Merge into a Time-Synchronized Self-Contained Set", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-no-comm-loss-during-startup", "nid": "n_epic_no_comm_loss_during_startup", "key": "MCHTRNCS-227", "title": "No Communication-Loss Declaration During Startup", "capability": "remote-all-stop-safety-capability", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-objective-progress-updates", "nid": "n_epic_objective_progress_updates", "key": "MCHTRNCS-272", "title": "Objective Progress Updates", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-objectives-reception", "nid": "n_epic_objectives_reception", "key": "MCHTRNCS-273", "title": "Objectives Reception", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-one-active-stop-mode", "nid": "n_epic_one_active_stop_mode", "key": "MCHTRNCS-230", "title": "Single Active Stop Mode", "capability": "remote-all-stop-safety-capability", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-preserve-serialization", "nid": "n_epic_preserve_serialization", "key": "MCHTRNCS-289", "title": "Preserve Serialization and Native Formats", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-priority-ordering", "nid": "n_epic_priority_ordering", "key": "MCHTRNCS-290", "title": "Priority Ordering of Off-load and Eviction", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-prohibited-transition-guard", "nid": "n_epic_prohibited_transition_guard", "key": "MCHTRNCS-203", "title": "Guard Against Prohibited Motion Transitions", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-provide-gate-criteria", "nid": "n_epic_provide_gate_criteria", "key": "MCHTRNCS-291", "title": "Provide Readiness Gate Criteria", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-publish-framework-distribution-forms", "nid": "n_epic_publish_framework_distribution_forms", "key": "MCHTRNCS-218", "title": "Publish Framework Distribution Forms and Interface Contracts", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-reject-all-stop-init-when-remote-stop", "nid": "n_epic_reject_all_stop_init_when_remote_stop", "key": "MCHTRNCS-228", "title": "Reject All Stop Initialization When Remote Stop Active", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-reject-remote-stop-init-when-all-stop", "nid": "n_epic_reject_remote_stop_init_when_all_stop", "key": "MCHTRNCS-229", "title": "Reject Remote Stop Initialization When All Stop Active", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-release-queue-after-staging", "nid": "n_epic_release_queue_after_staging", "key": "MCHTRNCS-292", "title": "Release Queued State Once Staged", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-report-offload-state", "nid": "n_epic_report_offload_state", "key": "MCHTRNCS-293", "title": "Report Off-load State via Diagnostics", "capability": "blackbox-data-off-load-to-cloud", "priority": "Could Have", "tts": "TBD"}, {"epic": "epic-report-supported-objectives", "nid": "n_epic_report_supported_objectives", "key": "MCHTRNCS-274", "title": "Report Supported Objectives", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-restore-queue-state-on-startup", "nid": "n_epic_restore_queue_state_on_startup", "key": "MCHTRNCS-294", "title": "Restore Queue State Before Eviction on Startup", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-resume-transfer-across-restart", "nid": "n_epic_resume_transfer_across_restart", "key": "MCHTRNCS-295", "title": "Resume Transfer Across Interruptions and Restarts", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-safe-state-transition-on-auth-loss", "nid": "n_epic_safe_state_transition_on_auth_loss", "key": "MCHTRNCS-142", "title": "Transition to Safe State on Authorization Loss", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-separate-teleop-icd", "nid": "n_epic_separate_teleop_icd", "key": "MCHTRNCS-301", "title": "Separate Tele-op ICD to Tele-op Controllers", "capability": "framework-packaging-extension-and-integration", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-sequential-objective-execution", "nid": "n_epic_sequential_objective_execution", "key": "MCHTRNCS-275", "title": "Sequential Objective Execution", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-skip-queued-in-fifo", "nid": "n_epic_skip_queued_in_fifo", "key": "MCHTRNCS-296", "title": "Skip Queued Files in FIFO Eviction", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-stage-prepared-dataset", "nid": "n_epic_stage_prepared_dataset", "key": "MCHTRNCS-297", "title": "Stage Prepared Data Set for Transfer", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-stop-command-on-all-stop-100ms", "nid": "n_epic_stop_command_on_all_stop_100ms", "key": "MCHTRNCS-232", "title": "Stop Command Within 100 ms on All Stop or Comm Loss", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-stop-command-processing-100ms", "nid": "n_epic_stop_command_processing_100ms", "key": "MCHTRNCS-231", "title": "Stop Command Processing Within 100 ms", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-stop-event-root-cause", "nid": "n_epic_stop_event_root_cause", "key": "MCHTRNCS-233", "title": "Stop Event Root-Cause Distinction", "capability": "remote-all-stop-safety-capability", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-stop-on-execution-fault", "nid": "n_epic_stop_on_execution_fault", "key": "MCHTRNCS-205", "title": "Stop on Execution Fault or Obstacle", "capability": "path-execution-and-objectives-translation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-stop-on-heading-overshoot", "nid": "n_epic_stop_on_heading_overshoot", "key": "MCHTRNCS-206", "title": "Stop on Heading Overshoot During Turn-In-Place", "capability": "path-execution-and-objectives-translation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-stop-on-path-deviation", "nid": "n_epic_stop_on_path_deviation", "key": "MCHTRNCS-207", "title": "Stop on Path Deviation", "capability": "path-execution-and-objectives-translation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-structured-map-conformance", "nid": "n_epic_structured_map_conformance", "key": "MCHTRNCS-197", "title": "Conform to Structured-Map Rules During Execution", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-subscribe-all-stop-broadcaster", "nid": "n_epic_subscribe_all_stop_broadcaster", "key": "MCHTRNCS-234", "title": "Subscribe to All Stop Broadcaster", "capability": "remote-all-stop-safety-capability", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-support-acumen-vehicles", "nid": "n_epic_support_acumen_vehicles", "key": "MCHTRNCS-240", "title": "Support Acumen Vehicles", "capability": "vehicle-kinematics-support", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-support-articulated-vehicles", "nid": "n_epic_support_articulated_vehicles", "key": "MCHTRNCS-241", "title": "Support Articulated Vehicles", "capability": "vehicle-kinematics-support", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-support-differential-drive-vehicles", "nid": "n_epic_support_differential_drive_vehicles", "key": "MCHTRNCS-242", "title": "Support Differential-Drive Vehicles", "capability": "vehicle-kinematics-support", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-tele-op-command-authorization-within-limits", "nid": "n_epic_tele_op_command_authorization_within_limits", "key": "MCHTRNCS-302", "title": "Tele-op Command Authorization Within Limits", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-tele-op-control-command-latency", "nid": "n_epic_tele_op_control_command_latency", "key": "MCHTRNCS-303", "title": "Tele-op Control Command Latency", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-tele-op-exclusive-control", "nid": "n_epic_tele_op_exclusive_control", "key": "MCHTRNCS-304", "title": "Tele-op Exclusive Control", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-tele-op-full-operator-control", "nid": "n_epic_tele_op_full_operator_control", "key": "MCHTRNCS-305", "title": "Tele-op Full Operator Control", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-teleop-connection-loss-safe-behavior", "nid": "n_epic_teleop_connection_loss_safe_behavior", "key": "MCHTRNCS-212", "title": "Tele-op Connection-Loss Safe Behavior", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-teleop-input-staleness-timeout", "nid": "n_epic_teleop_input_staleness_timeout", "key": "MCHTRNCS-213", "title": "Tele-op Input Staleness Timeout", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-teleop-link-loss-integrator-notification", "nid": "n_epic_teleop_link_loss_integrator_notification", "key": "MCHTRNCS-306", "title": "Tele-op Link-Loss Integrator Notification", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-teleop-motion-limit-conformance", "nid": "n_epic_teleop_motion_limit_conformance", "key": "MCHTRNCS-214", "title": "Tele-op Motion-Limit and Geofence Conformance", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-teleop-network-timeout-estop", "nid": "n_epic_teleop_network_timeout_estop", "key": "MCHTRNCS-215", "title": "Tele-op Network-Timeout Emergency Stop", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-translate-teleop-input-to-actuation", "nid": "n_epic_translate_teleop_input_to_actuation", "key": "MCHTRNCS-216", "title": "Translate Tele-op Input to Actuation", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-turn-in-place-heading-accuracy", "nid": "n_epic_turn_in_place_heading_accuracy", "key": "MCHTRNCS-208", "title": "Turn-In-Place Heading Accuracy", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-validate-supplied-path", "nid": "n_epic_validate_supplied_path", "key": "MCHTRNCS-209", "title": "Validate Supplied Path Before Execution", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-verify-file-integrity", "nid": "n_epic_verify_file_integrity", "key": "MCHTRNCS-298", "title": "Verify Per-File Transfer Integrity", "capability": "blackbox-data-off-load-to-cloud", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-withhold-motion-until-recovery-authorized", "nid": "n_epic_withhold_motion_until_recovery_authorized", "key": "MCHTRNCS-130", "title": "Withhold Motion Until Authorized Recovery", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}]</script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "loose",
+    theme: dark ? "dark" : "default",
+    flowchart: { curve: "basis", nodeSpacing: 45, rankSpacing: 60, useMaxWidth: false },
+  });
+  await mermaid.run({ querySelector: "pre.mermaid" });
+
+  const EPICS = JSON.parse(document.getElementById("epic-data").textContent);
+  const byNodeId = new Map(EPICS.map(e => [e.nid, e]));
+
+  /* ---------- zoom + pan, per panel ---------- */
+  for (const panel of document.querySelectorAll(".panel")) {
+    const viewport = panel.querySelector(".viewport");
+    const canvas = panel.querySelector(".canvas");
+    const state = { scale: 1, x: 0, y: 0 };
+
+    const apply = () => {
+      canvas.style.transform =
+        `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+    };
+    const zoomBy = (factor, originX, originY) => {
+      const next = Math.min(4, Math.max(0.1, state.scale * factor));
+      const ratio = next / state.scale;
+      state.x = originX - (originX - state.x) * ratio;
+      state.y = originY - (originY - state.y) * ratio;
+      state.scale = next;
+      apply();
+    };
+    const fit = () => {
+      const svg = canvas.querySelector("svg");
+      if (!svg) return;
+      const box = svg.getBoundingClientRect();
+      const width = box.width / state.scale;
+      const height = box.height / state.scale;
+      if (!width || !height) return;
+      state.scale = Math.min(viewport.clientWidth / (width + 32),
+                             viewport.clientHeight / (height + 32), 1.5);
+      state.x = (viewport.clientWidth - width * state.scale) / 2;
+      state.y = 12;
+      apply();
+    };
+
+    viewport.addEventListener("wheel", event => {
+      event.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,
+             event.clientX - rect.left, event.clientY - rect.top);
+    }, { passive: false });
+
+    let dragging = false, lastX = 0, lastY = 0;
+    viewport.addEventListener("pointerdown", event => {
+      if (event.target.closest("a, .node")) return;   // let node links through
+      dragging = true; lastX = event.clientX; lastY = event.clientY;
+      viewport.classList.add("dragging");
+      viewport.setPointerCapture(event.pointerId);
+    });
+    viewport.addEventListener("pointermove", event => {
+      if (!dragging) return;
+      state.x += event.clientX - lastX;
+      state.y += event.clientY - lastY;
+      lastX = event.clientX; lastY = event.clientY;
+      apply();
+    });
+    const endDrag = () => { dragging = false; viewport.classList.remove("dragging"); };
+    viewport.addEventListener("pointerup", endDrag);
+    viewport.addEventListener("pointercancel", endDrag);
+
+    panel.querySelector(".zoom").addEventListener("click", event => {
+      const action = event.target.dataset.zoom;
+      if (!action) return;
+      const cx = viewport.clientWidth / 2, cy = viewport.clientHeight / 2;
+      if (action === "in") zoomBy(1.25, cx, cy);
+      else if (action === "out") zoomBy(1 / 1.25, cx, cy);
+      else if (action === "fit") fit();
+      else { state.scale = 1; state.x = 0; state.y = 0; apply(); }
+    });
+
+    fit();
+  }
+
+  /* ---------- search + filters ---------- */
+  const q = document.getElementById("q");
+  const fCapability = document.getElementById("f-capability");
+  const fPriority = document.getElementById("f-priority");
+  const fTts = document.getElementById("f-tts");
+  const count = document.getElementById("count");
+  const cards = [...document.querySelectorAll(".card")];
+  const cardByEpic = new Map(cards.map(c => [c.dataset.epic, c]));
+
+  const matches = epic => {
+    const term = q.value.trim().toLowerCase();
+    if (term && !(`${epic.title} ${epic.key} ${epic.epic}`.toLowerCase().includes(term)))
+      return false;
+    if (fCapability.value && epic.capability !== fCapability.value) return false;
+    if (fPriority.value && epic.priority !== fPriority.value) return false;
+    if (fTts.value && epic.tts !== fTts.value) return false;
+    return true;
+  };
+
+  const graphNodes = [...document.querySelectorAll(".panel .node")].map(el => {
+    const id = (el.id || "").replace(/^flowchart-/, "").replace(/-\d+$/, "");
+    return { el, epic: byNodeId.get(id) };
+  }).filter(n => n.epic);
+
+  /* ---------- inventory drill-down: capabilities -> epics ----------
+     Three view states, all driven by render():
+       overview - the capability tiles, nothing drilled in, no filters
+       detail   - one capability's epics, reached by clicking its tile
+       search   - a term or filter is active, so every capability that still
+                  has a visible card is shown and the tiles step aside      */
+  const overview = document.getElementById("overview");
+  const detailSections = [...document.querySelectorAll(".cap-detail")];
+  const detailCaps = new Set(detailSections.map(s => s.dataset.capability));
+  const home = document.getElementById("home");
+  const invCaption = document.getElementById("inv-caption");
+  let current = "";
+
+  const filtersActive = () =>
+    Boolean(q.value.trim() || fCapability.value || fPriority.value || fTts.value);
+
+  const render = () => {
+    const searching = filtersActive();
+    overview.hidden = searching || Boolean(current);
+    home.hidden = !(searching || current);
+    for (const section of detailSections) {
+      if (searching)
+        section.hidden = ![...section.querySelectorAll(".card")].some(c => !c.hidden);
+      else
+        section.hidden = section.dataset.capability !== current;
+    }
+    if (searching)
+      invCaption.textContent = "matches across all capabilities";
+    else if (current)
+      invCaption.textContent = "one capability - use Back for all of them";
+    else
+      invCaption.innerHTML = `${detailSections.length} capabilities &middot; ` +
+        `${EPICS.length} epics &middot; pick a capability to see its epics`;
+  };
+
+  const applyFilters = () => {
+    let shown = 0;
+    for (const epic of EPICS) {
+      const ok = matches(epic);
+      if (ok) shown++;
+      const card = cardByEpic.get(epic.epic);
+      if (card) card.hidden = !ok;
+    }
+    for (const node of graphNodes) node.el.classList.toggle("dim", !matches(node.epic));
+    count.textContent = `${shown} of ${EPICS.length} epics`;
+    render();
+  };
+
+  const clearFilters = () => {
+    q.value = ""; fCapability.value = ""; fPriority.value = ""; fTts.value = "";
+  };
+
+  /* Keep the hash in sync so a drilled-in view is linkable and Back works. */
+  const show = cap => {
+    current = detailCaps.has(cap) ? cap : "";
+    const hash = current ? "#cap=" + encodeURIComponent(current) : "";
+    if (hash !== location.hash)
+      history.pushState(null, "", hash || location.pathname + location.search);
+    applyFilters();
+  };
+
+  const readHash = () => {
+    const match = /^#cap=(.+)$/.exec(location.hash);
+    const wanted = match ? decodeURIComponent(match[1]) : "";
+    current = detailCaps.has(wanted) ? wanted : "";
+    applyFilters();
+  };
+
+  for (const tile of document.querySelectorAll(".tile"))
+    tile.addEventListener("click", () => { clearFilters(); show(tile.dataset.capability); });
+  for (const back of document.querySelectorAll(".back"))
+    back.addEventListener("click", () => { clearFilters(); show(""); });
+  home.addEventListener("click", () => { clearFilters(); show(""); });
+
+  for (const control of [q, fCapability, fPriority, fTts])
+    control.addEventListener("input", applyFilters);
+
+  document.getElementById("reset").addEventListener("click", () => {
+    clearFilters();
+    show("");
+  });
+
+  window.addEventListener("popstate", readHash);
+  window.addEventListener("hashchange", readHash);
+
+  readHash();
+</script>
+</body></html>

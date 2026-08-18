@@ -1,0 +1,77 @@
+{
+  "blackbox-data-off-load-to-cloud": {
+    "cap_id": "CAP-06",
+    "priority": "Should Have",
+    "title": "Blackbox Data Off-load to Cloud"
+  },
+  "developer-tooling-update-path": {
+    "cap_id": "CAP-15",
+    "priority": "Must Have",
+    "title": "Developer-Tooling Update Path"
+  },
+  "framework-packaging-extension-and-integration": {
+    "cap_id": "CAP-07",
+    "priority": "Should Have",
+    "title": "Path-to-Actuation Framework Packaging, Extension, and Integration"
+  },
+  "motion-authorization": {
+    "cap_id": "CAP-01",
+    "priority": "Must Have",
+    "title": "Motion Authorization"
+  },
+  "observable-runtime-state": {
+    "cap_id": "CAP-09",
+    "priority": "Must Have",
+    "title": "Observable Runtime State"
+  },
+  "obstacle-detection-and-avoidance": {
+    "cap_id": "CAP-02",
+    "priority": "Must Have",
+    "title": "Obstacle Detection and Avoidance"
+  },
+  "path-execution-and-objectives-translation": {
+    "cap_id": "CAP-03",
+    "priority": "Should Have",
+    "title": "Path Execution and Objectives Translation"
+  },
+  "perception-for-manipulation": {
+    "cap_id": "CAP-11",
+    "priority": "Should Have",
+    "title": "Perception for Manipulation"
+  },
+  "remote-all-stop-safety-capability": {
+    "cap_id": "CAP-04",
+    "priority": "Must Have",
+    "title": "Remote/All Stop Safety Capability"
+  },
+  "robot-localization": {
+    "cap_id": "CAP-12",
+    "priority": "Must Have",
+    "title": "Robot Localization"
+  },
+  "robot-web-application": {
+    "cap_id": "CAP-10",
+    "priority": "Should Have",
+    "title": "Robot Web Application"
+  },
+  "software-update-and-rollback": {
+    "cap_id": "CAP-14",
+    "priority": "Must Have",
+    "title": "Software Update and Rollback"
+  },
+  "tele-operation": {
+    "cap_id": "CAP-08",
+    "priority": "Must Have",
+    "title": "Tele-operation"
+  },
+  "vehicle-kinematics-support": {
+    "cap_id": "CAP-05",
+    "priority": "Should Have",
+    "title": "Vehicle Kinematics Support"
+  },
+  "video-recording-and-streaming": {
+    "cap_id": "CAP-13",
+    "priority": "Should Have",
+    "title": "Video Recording and Streaming"
+  }
+}

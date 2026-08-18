@@ -1,0 +1,28 @@
+PRAK Embedded Epic Decomposition — Standing Meeting
+
+Purpose: Working sessions to evaluate & decompose the 87 Embedded-Core (VSP-Embedded) PRAK epics into stories with time estimates and dependencies. Data collection only — artifacts are produced outside the meeting.
+
+Roles (RACI) — this meeting runs two threads; Clint's role differs between them:
+• Estimation & decomposition (data): Accountable — Patrick McKee (owns tracker + outputs; editor). Responsible — Michael Anderson (SME: estimates, story breakdown, owner assignment; editor). Consulted — David Hayes (capacity/feasibility). Informed — Clint Jones.
+• 2TS scope & priority (decision): Accountable — Clint Jones (PRAK PM owns 2TS scope). Consulted — David Hayes, Michael Anderson. Responsible — Patrick McKee (facilitate + record). Informed — Chris Mann (via David).
+
+Estimation unit: all estimates in DAYS — keeps the tracker's Epic-total roll-up consistent (no story points).
+
+Tracker (live — we capture directly here): https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1
+
+Epic Evaluation Loop (~4 min/epic):
+1. System requirement clear after reading the epic? If not, mark needs-info and move on.
+2. Required for 2TS? If yes, set priority rank.
+3. How many stories to deliver this epic? Capture count + story titles (Michael assigns later for finer breakdown).
+4. Estimate time per story in DAYS.
+5. Roll-up (auto = story count × days/story).
+6. Blocking epics by ID — hard (can't start) vs soft (can start, can't finish); note cross-team blockers (GNC/ODOA) for initiative-level coordination.
+
+Agenda:
+0:00–0:05  (1) Epic batch selection — confirm ~10 pre-selected epics; set target count.
+0:05–0:10  (2) Carryover & blockers — resolve prior needs-info; add newly found dependencies (incl. cross-team).
+0:10–0:50  (3) Evaluation loops — ~4 min/epic × 10. Michael = estimate authority; Patrick captures.
+0:50–0:57  (4) Assignment & uncertainty — Michael assigns epic owners; flag IC follow-ups.
+0:57–1:00  (5) Loop evaluation — completion rate vs plan, adjust schedule, review assignments.
+
+Output per meeting: ~10 epics with refined day estimates, story count/breakdown, and blocking-epic dependencies.
