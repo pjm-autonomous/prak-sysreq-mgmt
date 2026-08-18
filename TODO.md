@@ -91,8 +91,8 @@ for context and excluded from the referencing team's counts.
 
 ## Blocked on access
 
-- [ ] **Smartsheet API token.** Patrick's permission level excludes API keys; an
-      IT help request was submitted 2026-08-18. Until it lands, `--live` and
+- [ ] **Smartsheet API token.** Patrick's permission level excludes API keys.
+      IT ticket **#help00004986**, submitted 2026-08-18. Until it lands, `--live` and
       `tools/export_snapshot.py` cannot run, and the scheduled refresh workflow
       cannot work even once it is committed.
       **Working path meanwhile:** in Smartsheet, File > Export > Export to CSV,
