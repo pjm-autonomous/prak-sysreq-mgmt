@@ -89,6 +89,11 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_VMODEL = os.path.normpath(os.path.join(_HERE, "..", "..", "prak-v-model"))
 DEFAULT_META_CACHE = os.path.normpath(
     os.path.join(_HERE, "..", "data", "capability-meta.json"))
+DEFAULT_CAP_JIRA = os.path.normpath(
+    os.path.join(_HERE, "..", "data", "capability-jira.json"))
+DEFAULT_MERMAID_BUNDLE = os.path.normpath(
+    os.path.join(_HERE, "..", "vendor", "mermaid.min.js"))
+MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
 
 
 # --------------------------------------------------------------------------- #
@@ -154,6 +159,29 @@ def load_capability_meta(vmodel_dir: str, cache_path: str) -> dict:
             fh.write("\n")
     except OSError as exc:
         print(f"note: could not write {cache_path}: {exc}", file=sys.stderr)
+    return meta
+
+
+def merge_capability_jira(meta: dict, path: str) -> dict:
+    """Attach each capability's Jira issue key, from a slug -> key JSON map.
+
+    A capability is a Jira Initiative issue (e.g. MCHTRNCS-259 for CAP-01), and
+    both the Embedded and Electronics epics hang off those same parents - it is
+    the one place the two trackers meet. The capreq files carry no Jira key, so
+    the mapping comes from this small committed file. Refresh it from a Jira CSV
+    export of the PRAK-labelled issues: each Initiative row's Summary is
+    "PLAT3-PRD_Rqmts-####: <capability title>", matched to a capreq by title.
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            cap_jira = json.load(fh)
+    except (OSError, ValueError):
+        return meta
+    for slug, key in cap_jira.items():
+        if slug in meta:
+            meta[slug]["jira_key"] = key
+        else:
+            print(f"note: {path} lists unknown capability {slug!r}", file=sys.stderr)
     return meta
 
 
@@ -415,6 +443,27 @@ def capability_code(slug: str, meta: dict) -> str:
     return meta.get(slug, {}).get("cap_id", "") or slug
 
 
+def capability_code_html(slug: str, meta: dict, cls: str) -> str:
+    """The CAP-nn chip, linked to the capability's Jira Initiative issue when
+    known. Rendered as a span inside the tile button, because a nested <a> in a
+    <button> is invalid HTML and swallows the tile's own click."""
+    code = esc_html(capability_code(slug, meta))
+    jira = meta.get(slug, {}).get("jira_key", "")
+    title = (f' title="Jira parent {esc_html(jira)} - shared with the other '
+             f'team\'s tracker"' if jira else "")
+    return f'<span class="{cls}"{title}>{code}</span>'
+
+
+def capability_jira_html(slug: str, meta: dict) -> str:
+    """A real link to the capability's Jira issue, for the level-2 detail head
+    where there is no enclosing button to conflict with."""
+    jira = meta.get(slug, {}).get("jira_key", "")
+    if not jira:
+        return ""
+    return (f'<a class="cap-jira" href="{JIRA_BROWSE}{esc_html(jira)}" '
+            f'target="_blank" rel="noopener">{esc_html(jira)} &#8599;</a>')
+
+
 def group_by_capability(records: list[dict]) -> dict[str, list[dict]]:
     by_capability: dict[str, list[dict]] = {}
     for rec in records:
@@ -452,8 +501,8 @@ def render_capability_tiles(records: list[dict], meta: dict) -> str:
             f'  <button type="button" class="tile{" unmapped" if unmapped else ""}"'
             f' data-capability="{esc_html(code)}">\n'
             f'    <div class="tile-head">'
-            f'<span class="tile-code">{esc_html(capability_code(code, meta))}'
-            f'</span><span class="tile-n">{len(group)} '
+            f'{capability_code_html(code, meta, "tile-code")}'
+            f'<span class="tile-n">{len(group)} '
             f'{"epic" if len(group) == 1 else "epics"}</span></div>\n'
             f'    <h3>{esc_html(capability_label(code, meta))}</h3>\n'
             f'    {slug_html(code, meta)}\n'
@@ -481,7 +530,8 @@ def render_cards(records: list[dict], meta: dict) -> str:
         )
         code_html = ("" if cap == UNASSIGNED
                      else f'<code class="detail-code">'
-                          f'{esc_html(capability_code(cap, meta))}</code>')
+                          f'{esc_html(capability_code(cap, meta))}</code>'
+                          + capability_jira_html(cap, meta))
         out.append(f'<section class="cap-detail" hidden '
                    f'data-capability="{esc_html(cap)}">')
         out.append(
@@ -559,7 +609,7 @@ def render_graph_panels(components: list[list[str]],
 HTML_TEMPLATE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Embedded-Core Epic Dependency DAG</title>
+<title>__TITLE__</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #111827; --muted: #667085; --line: #e4e7ec;
@@ -679,6 +729,7 @@ HTML_TEMPLATE = r"""<!doctype html>
   .detail-code { font-size: .74rem; background: var(--chip); border-radius: 999px;
                  padding: .1rem .45rem; }
   .detail-n { color: var(--muted); font-size: .8rem; }
+  .cap-jira { font-size: .76rem; font-weight: 600; text-decoration: none; }
   .detail-head .cap { flex-basis: 100%; }
   .back { font: inherit; font-size: .82rem; padding: .2rem .55rem; cursor: pointer;
           color: var(--fg); background: var(--bg); border: 1px solid var(--line);
@@ -712,11 +763,11 @@ HTML_TEMPLATE = r"""<!doctype html>
 </style></head>
 <body>
 <header>
-  <h1>Embedded-Core Epic Dependency DAG</h1>
+  <h1>__TITLE__</h1>
   <div class="stats">
     <span>__STATS__</span>
     <span>generated __TS__</span>
-    <span><a href="__SHEET__" target="_blank" rel="noopener">open tracker &#8599;</a></span>
+    __SHEET__
   </div>
   <div class="legend">
     <span class="lg-must">Must</span><span class="lg-should">Should</span>
@@ -756,9 +807,13 @@ __PANELS__
 <div id="overview">__TILES__</div>
 <div id="details">__CARDS__</div>
 
+__MERMAID_LOADER__
 <script id="epic-data" type="application/json">__DATA__</script>
 <script type="module">
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  /* A vendored bundle, if one was loaded above, has already set globalThis.mermaid;
+     otherwise fall back to the CDN so the page still renders. */
+  const mermaid = globalThis.mermaid
+    ?? (await import("__MERMAID_CDN__")).default;
 
   const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   mermaid.initialize({
@@ -957,9 +1012,40 @@ __PANELS__
 """
 
 
+def mermaid_loader(mode: str, bundle: str, outdir: str) -> str:
+    """The <script> that makes mermaid available, per --mermaid mode.
+
+    vendor  - reference the committed bundle by a path relative to the output
+              file, so a published site serves it same-origin and an opened
+              local file still resolves it. Keeps the 3.5 MB blob out of every
+              regenerated HTML, which matters because these files are rebuilt
+              after every meeting and would otherwise churn git history.
+    inline  - embed the bundle, for a single portable file with no sibling
+              dependency. Adds ~3.5 MB per output file.
+    cdn     - load from jsdelivr at view time. No repo weight, but the page then
+              depends on a third-party host being reachable.
+    auto    - vendor when the bundle exists, else cdn.
+    """
+    if mode == "auto":
+        mode = "vendor" if os.path.isfile(bundle) else "cdn"
+    if mode == "cdn":
+        return ""
+    if not os.path.isfile(bundle):
+        sys.exit(f"ERROR: --mermaid {mode} needs a bundle at {bundle}. "
+                 "Download it (see vendor/README.md) or pass --mermaid cdn.")
+    if mode == "vendor":
+        rel = os.path.relpath(bundle, os.path.abspath(outdir)).replace(os.sep, "/")
+        return f'<script src="{esc_html(rel)}"></script>'
+    with open(bundle, encoding="utf-8") as fh:
+        js = fh.read()
+    # "</script" inside a JS string literal would close the tag early.
+    return "<script>" + js.replace("</script", r"<\/script") + "</script>"
+
+
 def build_html(records: list[dict], components: list[list[str]],
                edges: list[tuple[str, str, str]], stats_line: str,
-               timestamp: str, note: str, meta: dict) -> str:
+               timestamp: str, note: str, meta: dict,
+               title: str, sheet_url: str, mermaid_html: str) -> str:
     records_by_epic = {r["Epic"].strip(): r for r in records}
 
     capabilities = sorted({capability_of(r) for r in records},
@@ -993,7 +1079,12 @@ def build_html(records: list[dict], components: list[list[str]],
     replacements = {
         "__STATS__": stats_line,
         "__TS__": esc_html(timestamp),
-        "__SHEET__": SHEET_URL,
+        "__TITLE__": esc_html(title),
+        "__MERMAID_LOADER__": mermaid_html,
+        "__MERMAID_CDN__": MERMAID_CDN,
+        "__SHEET__": (f'<span><a href="{esc_html(sheet_url)}" target="_blank" '
+                      f'rel="noopener">open tracker &#8599;</a></span>'
+                      if sheet_url else ""),
         "__NOTE__": note_html,
         "__CAPABILITY_OPTS__": capability_opts,
         "__GRAPH_CAPTION__": caption,
@@ -1020,6 +1111,12 @@ def main() -> None:
     src.add_argument("--live", action="store_true", help="pull via Smartsheet API")
     src.add_argument("--csv", metavar="PATH", help="read a Grid CSV export")
     ap.add_argument("--sheet-id", type=int, default=DEFAULT_SHEET_ID)
+    ap.add_argument("--sheet-url", default=SHEET_URL,
+                    help="tracker permalink for the viewer's 'open tracker' link. "
+                         "Pass a different sheet's URL when generating another "
+                         "team's DAG, or '' to omit the link entirely.")
+    ap.add_argument("--title", default="Embedded-Core Epic Dependency DAG",
+                    help="page title and heading (default: %(default)s)")
     here = os.path.dirname(os.path.abspath(__file__))
     ap.add_argument("--outdir", default=os.path.normpath(
         os.path.join(here, "..", "agile-planning", "dependency-dag")))
@@ -1031,12 +1128,23 @@ def main() -> None:
     ap.add_argument("--vmodel", default=DEFAULT_VMODEL,
                     help="prak-v-model checkout, read for capability titles and "
                          "PRD ids (default: %(default)s)")
+    ap.add_argument("--mermaid", choices=["auto", "cdn", "vendor", "inline"],
+                    default="auto",
+                    help="how the viewer loads mermaid: vendor (reference the "
+                         "committed bundle), inline (embed it), cdn (jsdelivr), "
+                         "or auto = vendor when the bundle exists (default)")
+    ap.add_argument("--mermaid-bundle", default=DEFAULT_MERMAID_BUNDLE,
+                    help="path to the mermaid UMD bundle (default: %(default)s)")
+    ap.add_argument("--capability-jira", default=DEFAULT_CAP_JIRA,
+                    help="JSON map of capability slug -> Jira Initiative key, "
+                         "used to link each capability to its shared parent issue")
     ap.add_argument("--meta-cache", default=DEFAULT_META_CACHE,
                     help="where the resolved capability titles are cached so runs "
                          "without --vmodel still render labels")
     args = ap.parse_args()
 
-    meta = load_capability_meta(args.vmodel, args.meta_cache)
+    meta = merge_capability_jira(
+        load_capability_meta(args.vmodel, args.meta_cache), args.capability_jira)
     records = load_live(args.sheet_id) if args.live else load_csv(args.csv)
     records = [r for r in records if r["Epic"].strip()]
     if not records:
@@ -1072,7 +1180,10 @@ def main() -> None:
         fh.write(mermaid_src)
     with open(html_path, "w", encoding="utf-8") as fh:
         fh.write(build_html(records, components, edges, stats_line,
-                            timestamp, args.note, meta))
+                            timestamp, args.note, meta,
+                            args.title, args.sheet_url,
+                            mermaid_loader(args.mermaid, args.mermaid_bundle,
+                                           args.outdir)))
 
     print(f"wrote {mmd_path}")
     print(f"wrote {html_path}")

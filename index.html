@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRAK System Requirements &mdash; Epic Decomposition</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #111827; --muted: #667085; --line: #e4e7ec;
+    --panel: #fbfcfd; --chip: #f2f4f7; --link: #175cd3; --accent: #175cd3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1319; --fg: #e6e8ec; --muted: #98a2b3; --line: #2a3039;
+      --panel: #161b22; --chip: #232a34; --link: #7cb0ff; --accent: #7cb0ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+         margin: 0 auto; max-width: 60rem; padding: 1.6rem 1.4rem 4rem;
+         background: var(--bg); color: var(--fg); line-height: 1.5; }
+  a { color: var(--link); }
+  .muted { color: var(--muted); font-size: .87rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1rem; margin-bottom: 1.4rem; }
+  h1 { font-size: 1.5rem; margin: 0 0 .3rem; }
+  h2 { font-size: 1.05rem; margin: 2rem 0 .8rem; padding-bottom: .3rem;
+       border-bottom: 1px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 0 0 .2rem; }
+  .teams { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
+  .team { border: 1px solid var(--line); border-radius: 10px; padding: .9rem 1rem 1rem;
+          background: var(--panel); }
+  .progress { margin: .7rem 0 .8rem; display: grid; gap: .3rem; }
+  .progress div { display: flex; justify-content: space-between; gap: 1rem;
+                  border-bottom: 1px dotted var(--line); padding-bottom: .2rem; }
+  .progress dt { font-size: .87rem; color: var(--muted); }
+  .progress dd { margin: 0; font-size: .87rem; font-variant-numeric: tabular-nums; }
+  .links { display: flex; flex-wrap: wrap; gap: .3rem .9rem; margin: 0; font-size: .87rem; }
+  .links .primary { font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); }
+  th { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em;
+       color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .cap-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; }
+  .key { font-size: .82rem; }
+  .wrap { overflow-x: auto; }
+  .note { border-left: 3px solid var(--accent); background: var(--panel);
+          padding: .6rem .8rem; font-size: .88rem; margin: 1rem 0; }
+  footer { margin-top: 2.5rem; padding-top: .8rem; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: .82rem; }
+</style></head>
+<body>
+<header>
+  <h1>PRAK System Requirements &mdash; Epic Decomposition</h1>
+  <p class="muted">Dependency DAGs and decomposition progress for the PRAK epics,
+  generated from the trackers of record. Two teams, tracked separately, sharing
+  the same PRD Capability Requirements.</p>
+</header>
+
+<h2>Teams</h2>
+<div class="teams">
+  <section class="team">
+    <h3>Embedded-Core</h3>
+    <p class="muted">VSP-Embedded, project MCHTRNCS &middot; 87 epics across 9 capabilities</p>
+    <dl class="progress">
+      <div><dt>Epics evaluated</dt><dd>0 / 87 <span class="muted">(0%)</span></dd></div>
+      <div><dt>Dependencies recorded</dt><dd>0 / 87 <span class="muted">(0%)</span></dd></div>
+    </dl>
+    <p class="links">
+      <a class="primary" href="agile-planning/dependency-dag/dependency-dag.html">Open the dependency DAG &rarr;</a>
+      <a href="agile-planning/dependency-dag/dependency-dag.mmd">Mermaid source</a>
+      <a href="agile-planning/meeting-agenda/standingagenda-embedded.html">Standing agenda</a>
+      <a href="https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1" target="_blank" rel="noopener">Smartsheet tracker &#8599;</a>
+    </p>
+  </section>
+  <section class="team">
+    <h3>Electronics</h3>
+    <p class="muted">Electrical Platform, project ET &middot; 15 epics across 4 capabilities</p>
+    <dl class="progress">
+      <div><dt>Epics evaluated</dt><dd>0 / 15 <span class="muted">(0%)</span></dd></div>
+      <div><dt>Dependencies recorded</dt><dd>0 / 15 <span class="muted">(0%)</span></dd></div>
+    </dl>
+    <p class="links">
+      <a class="primary" href="agile-planning/dependency-dag-electronics/dependency-dag.html">Open the dependency DAG &rarr;</a>
+      <a href="agile-planning/dependency-dag-electronics/dependency-dag.mmd">Mermaid source</a>
+      <a href="agile-planning/meeting-agenda/standingagenda-electronics.html">Standing agenda</a>
+      <span class="muted">no tracker yet</span>
+    </p>
+  </section>
+</div>
+
+<div class="note">
+  <b>Progress is genuinely at zero.</b> Epics are evaluated and dependencies
+  recorded during the standing meetings; until those happen, both DAGs render
+  every epic as unblocked. The Embedded example render
+  (<a href="agile-planning/dependency-dag/dependency-dag.example.html">dependency-dag.example.html</a>)
+  shows how a populated DAG looks, using sample edges rather than real ones.
+</div>
+
+<h2>Shared PRD capabilities</h2>
+<p class="muted">Both teams' epics hang off these Jira Initiative issues. This is
+the only layer the two trackers share &mdash; no epic appears in both.</p>
+<div class="wrap">
+<table>
+  <thead><tr><th>PRD id</th><th>Capability</th><th class="num">Embedded-Core</th><th class="num">Electronics</th><th>Jira parent</th></tr></thead>
+  <tbody>
+    <tr><td class="cap-id">CAP-01</td><td>Motion Authorization</td><td class="num">10</td><td class="num">5</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-259" target="_blank" rel="noopener">MCHTRNCS-259</a></td></tr>
+    <tr><td class="cap-id">CAP-02</td><td>Obstacle Detection and Avoidance</td><td class="num">1</td><td class="num">&mdash;</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-260" target="_blank" rel="noopener">MCHTRNCS-260</a></td></tr>
+    <tr><td class="cap-id">CAP-03</td><td>Path Execution and Objectives Translation</td><td class="num">12</td><td class="num">2</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-261" target="_blank" rel="noopener">MCHTRNCS-261</a></td></tr>
+    <tr><td class="cap-id">CAP-04</td><td>Remote/All Stop Safety Capability</td><td class="num">17</td><td class="num">&mdash;</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-262" target="_blank" rel="noopener">MCHTRNCS-262</a></td></tr>
+    <tr><td class="cap-id">CAP-05</td><td>Vehicle Kinematics Support</td><td class="num">5</td><td class="num">&mdash;</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-263" target="_blank" rel="noopener">MCHTRNCS-263</a></td></tr>
+    <tr><td class="cap-id">CAP-06</td><td>Blackbox Data Off-load to Cloud</td><td class="num">22</td><td class="num">&mdash;</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-268" target="_blank" rel="noopener">MCHTRNCS-268</a></td></tr>
+    <tr><td class="cap-id">CAP-07</td><td>Path-to-Actuation Framework Packaging, Extension, and Integration</td><td class="num">8</td><td class="num">&mdash;</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-264" target="_blank" rel="noopener">MCHTRNCS-264</a></td></tr>
+    <tr><td class="cap-id">CAP-08</td><td>Tele-operation</td><td class="num">11</td><td class="num">7</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-265" target="_blank" rel="noopener">MCHTRNCS-265</a></td></tr>
+    <tr><td class="cap-id">CAP-09</td><td>Observable Runtime State</td><td class="num">1</td><td class="num">1</td><td class="key"><a href="https://asirobots.atlassian.net/browse/MCHTRNCS-266" target="_blank" rel="noopener">MCHTRNCS-266</a></td></tr>
+  </tbody>
+  <tfoot><tr><th></th><th>Total</th><th class="num">87</th><th class="num">15</th><th></th></tr></tfoot>
+</table>
+</div>
+
+<h2>How this is built</h2>
+<p class="muted">Nothing here is hand-drawn. <code>tools/build_dependency_dag.py</code>
+reads a tracker &mdash; live over the Smartsheet API, or from a CSV export &mdash; and
+re-emits the diagram and viewer. Re-run it and the pages reflect current state.
+See <a href="README.md">README.md</a> for the commands and
+<a href="TODO.md">TODO.md</a> for what is still open.</p>
+
+<footer>
+  Counted from <code>data/tracker-snapshot*.csv</code>. Rebuild this page with
+  <code>python3 tools/build_index.py</code>.
+</footer>
+</body></html>

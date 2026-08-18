@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electronics Epic Dependency DAG</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #111827; --muted: #667085; --line: #e4e7ec;
+    --panel: #fbfcfd; --chip: #f2f4f7; --link: #175cd3; --accent: #175cd3;
+    --must-bg: #fde4e1; --must-br: #b42318;
+    --should-bg: #fff3d6; --should-br: #b25e09;
+    --could-bg: #e6f0fd; --could-br: #175cd3;
+    --wont-bg: #eceef2; --wont-br: #667085;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1319; --fg: #e6e8ec; --muted: #98a2b3; --line: #2a3039;
+      --panel: #161b22; --chip: #232a34; --link: #7cb0ff; --accent: #7cb0ff;
+      --must-bg: #4a1c17; --must-br: #f2705d;
+      --should-bg: #4a3410; --should-br: #f5b544;
+      --could-bg: #14304f; --could-br: #7cb0ff;
+      --wont-bg: #262b33; --wont-br: #98a2b3;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+         margin: 0; padding: 1.2rem 1.4rem 3rem; background: var(--bg); color: var(--fg);
+         line-height: 1.45; }
+  a { color: var(--link); }
+  .muted { color: var(--muted); font-size: .85rem; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: .8rem; margin-bottom: 1rem; }
+  h1 { font-size: 1.2rem; margin: 0 0 .4rem; }
+  .stats { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; align-items: baseline;
+           color: var(--muted); font-size: .85rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
+  .legend span { display: inline-block; padding: .1rem .5rem; border-radius: 4px;
+                 font-size: .78rem; border: 1px solid; color: var(--fg); }
+  .lg-must { background: var(--must-bg); border-color: var(--must-br); }
+  .lg-should { background: var(--should-bg); border-color: var(--should-br); }
+  .lg-could { background: var(--could-bg); border-color: var(--could-br); }
+  .lg-wont { background: var(--wont-bg); border-color: var(--wont-br); }
+  .lg-tts { border: 3px solid var(--fg); font-weight: 600; }
+  .note { margin-top: .6rem; padding: .5rem .7rem; border-left: 3px solid var(--accent);
+          background: var(--panel); font-size: .85rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: .5rem .7rem; align-items: center;
+             margin: 0 0 1.2rem; padding: .6rem .7rem; background: var(--panel);
+             border: 1px solid var(--line); border-radius: 8px; position: sticky;
+             top: 0; z-index: 20; }
+  .toolbar input, .toolbar select, .toolbar button {
+      font: inherit; font-size: .87rem; padding: .3rem .5rem; color: var(--fg);
+      background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+  .toolbar input { min-width: 15rem; flex: 1 1 15rem; }
+  .toolbar button { cursor: pointer; }
+  .toolbar button:hover { border-color: var(--accent); }
+  #count { margin-left: auto; color: var(--muted); font-size: .85rem; white-space: nowrap; }
+
+  h2 { font-size: 1rem; margin: 1.8rem 0 .6rem; padding-bottom: .3rem;
+       border-bottom: 1px solid var(--line); }
+  h2 .muted { font-weight: 400; margin-left: .5rem; }
+
+  .empty { padding: 1rem 1.1rem; border: 1px dashed var(--line); border-radius: 8px;
+           background: var(--panel); max-width: 62ch; }
+  .empty p { margin: .3rem 0; }
+  .empty code { background: var(--chip); padding: .05rem .3rem; border-radius: 4px; }
+
+  .panel { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 1rem;
+           background: var(--panel); overflow: hidden; }
+  .panel-head { display: flex; align-items: center; gap: .7rem; padding: .45rem .7rem;
+                border-bottom: 1px solid var(--line); }
+  .panel-head h3 { font-size: .9rem; margin: 0; }
+  .zoom { margin-left: auto; display: flex; gap: .25rem; }
+  .zoom button { font: inherit; font-size: .8rem; padding: .15rem .5rem; cursor: pointer;
+                 background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+                 border-radius: 5px; }
+  .zoom button:hover { border-color: var(--accent); }
+  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
+              cursor: grab; background: var(--bg); }
+  .viewport.dragging { cursor: grabbing; }
+  .canvas { transform-origin: 0 0; padding: 1rem; }
+  .canvas pre.mermaid { margin: 0; background: none; }
+  .node.dim { opacity: .15; }
+
+  /* ---- inventory level 1: capability tiles ---- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+           gap: .7rem; }
+  .tile { font: inherit; text-align: left; cursor: pointer; color: var(--fg);
+          background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          padding: .7rem .8rem .75rem; display: flex; flex-direction: column;
+          gap: .4rem; transition: border-color .12s, transform .12s; }
+  .tile:hover, .tile:focus-visible { border-color: var(--accent);
+          transform: translateY(-1px); outline: none; }
+  .tile.unmapped { border-style: dashed; }
+  .tile-head { display: flex; align-items: baseline; gap: .5rem; }
+  .tile-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+               font-size: .74rem; letter-spacing: .02em; text-transform: uppercase;
+               color: var(--fg); background: var(--chip); border-radius: 999px;
+               padding: .1rem .45rem; }
+  .tile-n { margin-left: auto; color: var(--muted); font-size: .8rem; }
+  .tile h3 { font-size: .98rem; margin: 0; line-height: 1.25; }
+  .cap { color: var(--muted); font-size: .78rem; }
+  .bars { display: flex; gap: 2px; height: 6px; border-radius: 999px; overflow: hidden;
+          background: var(--chip); }
+  .bar { display: block; min-width: 3px; }
+  .bar.must { background: var(--must-br); }
+  .bar.should { background: var(--should-br); }
+  .bar.could { background: var(--could-br); }
+  .bar.wont { background: var(--wont-br); }
+  .tile-meta { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .tile-meta .chip { font-size: .7rem; padding: .05rem .4rem; border-radius: 999px;
+                     background: var(--chip); color: var(--fg); }
+
+  /* ---- inventory level 2: one capability's epics ---- */
+  .cap-detail { border: 1px solid var(--line); border-radius: 10px;
+                margin-bottom: .8rem; background: var(--panel); }
+  .cap-detail[hidden] { display: none; }
+  .detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem;
+                 padding: .55rem .7rem; border-bottom: 1px solid var(--line); }
+  .detail-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+  .detail-head h3 { font-size: .98rem; margin: 0; }
+  .detail-code { font-size: .74rem; background: var(--chip); border-radius: 999px;
+                 padding: .1rem .45rem; }
+  .detail-n { color: var(--muted); font-size: .8rem; }
+  .cap-jira { font-size: .76rem; font-weight: 600; text-decoration: none; }
+  .detail-head .cap { flex-basis: 100%; }
+  .back { font: inherit; font-size: .82rem; padding: .2rem .55rem; cursor: pointer;
+          color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+          border-radius: 6px; }
+  .back:hover { border-color: var(--accent); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+           gap: .5rem; padding: .7rem; }
+
+  .card { border: 1px solid; border-radius: 6px; padding: .5rem .6rem; color: #111827;
+          display: flex; flex-direction: column; gap: .35rem; }
+  .card[hidden] { display: none; }
+  .card.must { background: var(--must-bg); border-color: var(--must-br); }
+  .card.should { background: var(--should-bg); border-color: var(--should-br); }
+  .card.could { background: var(--could-bg); border-color: var(--could-br); }
+  .card.wont { background: var(--wont-bg); border-color: var(--wont-br); }
+  .card.tts { border-width: 3px; }
+  @media (prefers-color-scheme: dark) { .card { color: var(--fg); } }
+  .card h3 { font-size: .87rem; margin: 0; font-weight: 600; line-height: 1.3; }
+  .card-meta { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
+  .card .key { font-size: .76rem; font-weight: 600; text-decoration: none; }
+  .card .chip { font-size: .7rem; padding: .05rem .35rem; border-radius: 999px;
+                background: rgba(127,127,127,.18); }
+  .card .slug { font-size: .68rem; opacity: .65; word-break: break-all; }
+
+  @media print {
+    .toolbar, .zoom { display: none; }
+    body { padding: 0; }
+    .viewport { height: auto; overflow: visible; }
+    .cards { grid-template-columns: repeat(3, 1fr); }
+  }
+</style></head>
+<body>
+<header>
+  <h1>Electronics Epic Dependency DAG</h1>
+  <div class="stats">
+    <span>15 epics &middot; 4 capabilities &middot; 0 hard + 0 soft edges</span>
+    <span>generated 2026-08-18 21:25 UTC</span>
+    
+  </div>
+  <div class="legend">
+    <span class="lg-must">Must</span><span class="lg-should">Should</span>
+    <span class="lg-could">Could</span><span class="lg-wont">Won't</span>
+    <span class="lg-tts">bold border = 2TS required</span>
+  </div>
+  <div class="stats" style="margin-top:.4rem">
+    <span>solid arrow = hard blocker &middot; dashed arrow = soft blocker &middot;
+          edge points blocker &rarr; dependent</span>
+  </div>
+  <div class="note">Epics and capabilities sourced from prak-v-model (platform-team: Electronics); Jira keys are the ET project epics. Not yet driven by a Smartsheet tracker, so there are no meeting inputs and no dependency edges yet.</div>
+</header>
+
+<div class="toolbar">
+  <input id="q" type="search" placeholder="Search title, Jira key, or epic id" autocomplete="off">
+  <select id="f-capability"><option value="">All capabilities</option><option value="motion-authorization">CAP-01 - Motion Authorization</option><option value="path-execution-and-objectives-translation">CAP-03 - Path Execution and Objectives Translation</option><option value="tele-operation">CAP-08 - Tele-operation</option><option value="observable-runtime-state">CAP-09 - Observable Runtime State</option></select>
+  <select id="f-priority">
+    <option value="">All priorities</option>
+    <option>Must Have</option><option>Should Have</option>
+    <option>Could Have</option><option>Will Not Have</option>
+  </select>
+  <select id="f-tts">
+    <option value="">2TS: any</option>
+    <option value="Yes">2TS: Yes</option>
+    <option value="No">2TS: No</option>
+    <option value="TBD">2TS: TBD</option>
+  </select>
+  <button type="button" id="reset">Reset</button>
+  <button type="button" id="home" hidden>&larr; All capabilities</button>
+  <span id="count"></span>
+</div>
+
+<h2>Dependency graph <span class="muted">0 of 15 epics have dependencies</span></h2>
+<div class="empty">
+  <p><strong>No dependencies recorded yet.</strong></p>
+  <p>Every epic below is currently unblocked. Edges appear here as soon as the
+     tracker's <strong>Blocking Epics</strong> column is filled in during the
+     evaluation meetings - list the epics that must finish first, tagged
+     <code>(hard)</code> or <code>(soft)</code>, then re-run the generator.</p>
+</div>
+
+<h2>Epic inventory <span class="muted" id="inv-caption"></span></h2>
+<div id="overview"><div class="tiles">
+  <button type="button" class="tile" data-capability="motion-authorization">
+    <div class="tile-head"><span class="tile-code" title="Jira parent MCHTRNCS-259 - shared with the other team's tracker">CAP-01</span><span class="tile-n">5 epics</span></div>
+    <h3>Motion Authorization</h3>
+    <div class="cap">capreq-motion-authorization</div>
+    <div class="bars"><span class="bar must" style="flex:3" title="3 Must Have"></span><span class="bar should" style="flex:2" title="2 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">3 Must</span><span class="chip">2 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="path-execution-and-objectives-translation">
+    <div class="tile-head"><span class="tile-code" title="Jira parent MCHTRNCS-261 - shared with the other team's tracker">CAP-03</span><span class="tile-n">2 epics</span></div>
+    <h3>Path Execution and Objectives Translation</h3>
+    <div class="cap">capreq-path-execution-and-objectives-translation</div>
+    <div class="bars"><span class="bar should" style="flex:2" title="2 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">2 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="tele-operation">
+    <div class="tile-head"><span class="tile-code" title="Jira parent MCHTRNCS-265 - shared with the other team's tracker">CAP-08</span><span class="tile-n">7 epics</span></div>
+    <h3>Tele-operation</h3>
+    <div class="cap">capreq-tele-operation</div>
+    <div class="bars"><span class="bar must" style="flex:4" title="4 Must Have"></span><span class="bar should" style="flex:3" title="3 Should Have"></span></div>
+    <div class="tile-meta"><span class="chip">4 Must</span><span class="chip">3 Should</span><span class="chip">0 2TS</span></div>
+  </button>
+  <button type="button" class="tile" data-capability="observable-runtime-state">
+    <div class="tile-head"><span class="tile-code" title="Jira parent MCHTRNCS-266 - shared with the other team's tracker">CAP-09</span><span class="tile-n">1 epic</span></div>
+    <h3>Observable Runtime State</h3>
+    <div class="cap">capreq-observable-runtime-state</div>
+    <div class="bars"><span class="bar must" style="flex:1" title="1 Must Have"></span></div>
+    <div class="tile-meta"><span class="chip">1 Must</span><span class="chip">0 2TS</span></div>
+  </button>
+</div></div>
+<div id="details"><section class="cap-detail" hidden data-capability="motion-authorization">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Motion Authorization</h3><code class="detail-code">CAP-01</code><a class="cap-jira" href="https://asirobots.atlassian.net/browse/MCHTRNCS-259" target="_blank" rel="noopener">MCHTRNCS-259 &#8599;</a><span class="detail-n">5 epics</span></div>
+    <div class="cap">capreq-motion-authorization</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-confirm-auto-manual-in-auto">
+      <h3>Confirm Auto/Manual Switch in Auto</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2958" target="_blank" rel="noopener">ET-2958</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-confirm-auto-manual-in-auto</code>
+    </article>
+    <article class="card must" data-epic="epic-publish-visible-operating-indications">
+      <h3>Publish Visible Operating-Mode and Safe-State Indications</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2956" target="_blank" rel="noopener">ET-2956</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-publish-visible-operating-indications</code>
+    </article>
+    <article class="card must" data-epic="epic-record-recovery-acknowledgment">
+      <h3>Record Recovery Acknowledgment</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2957" target="_blank" rel="noopener">ET-2957</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-record-recovery-acknowledgment</code>
+    </article>
+    <article class="card should" data-epic="epic-accept-c2-movement-request">
+      <h3>Accept C2 Movement Request over Runtime ICD</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2951" target="_blank" rel="noopener">ET-2951</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-accept-c2-movement-request</code>
+    </article>
+    <article class="card should" data-epic="epic-publish-motion-authorization-state">
+      <h3>Publish Motion-Authorization State and Diagnostics</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2952" target="_blank" rel="noopener">ET-2952</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-publish-motion-authorization-state</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="path-execution-and-objectives-translation">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Path Execution and Objectives Translation</h3><code class="detail-code">CAP-03</code><a class="cap-jira" href="https://asirobots.atlassian.net/browse/MCHTRNCS-261" target="_blank" rel="noopener">MCHTRNCS-261 &#8599;</a><span class="detail-n">2 epics</span></div>
+    <div class="cap">capreq-path-execution-and-objectives-translation</div>
+  </div>
+  <div class="cards">
+    <article class="card should" data-epic="epic-acknowledge-path-to-c2">
+      <h3>Acknowledge Path Acceptance or Rejection to C2</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2965" target="_blank" rel="noopener">ET-2965</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-acknowledge-path-to-c2</code>
+    </article>
+    <article class="card should" data-epic="epic-publish-path-execution-telemetry">
+      <h3>Publish Path-Execution Telemetry and Completion</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2953" target="_blank" rel="noopener">ET-2953</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-publish-path-execution-telemetry</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="tele-operation">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Tele-operation</h3><code class="detail-code">CAP-08</code><a class="cap-jira" href="https://asirobots.atlassian.net/browse/MCHTRNCS-265" target="_blank" rel="noopener">MCHTRNCS-265 &#8599;</a><span class="detail-n">7 epics</span></div>
+    <div class="cap">capreq-tele-operation</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-detect-teleop-link-loss-and-report">
+      <h3>Detect and Report Tele-op Link / Motion-Auth Loss</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2960" target="_blank" rel="noopener">ET-2960</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-detect-teleop-link-loss-and-report</code>
+    </article>
+    <article class="card must" data-epic="epic-no-video-stream-on-teleop-icd">
+      <h3>No Video Stream on Tele-op ICD</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2961" target="_blank" rel="noopener">ET-2961</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-no-video-stream-on-teleop-icd</code>
+    </article>
+    <article class="card must" data-epic="epic-publish-teleop-override-notification">
+      <h3>Publish Tele-op Override Notification</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2962" target="_blank" rel="noopener">ET-2962</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-publish-teleop-override-notification</code>
+    </article>
+    <article class="card must" data-epic="epic-require-los-ack-at-session-init">
+      <h3>Require Line-of-Sight Acknowledgment at Session Init</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2964" target="_blank" rel="noopener">ET-2964</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-require-los-ack-at-session-init</code>
+    </article>
+    <article class="card should" data-epic="epic-publish-teleop-situational-feedback">
+      <h3>Publish Tele-op Situational-Awareness Feedback</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2963" target="_blank" rel="noopener">ET-2963</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-publish-teleop-situational-feedback</code>
+    </article>
+    <article class="card should" data-epic="epic-validate-teleop-icd-at-session-init">
+      <h3>Validate Tele-op ICD at Session Initiation</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2954" target="_blank" rel="noopener">ET-2954</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-validate-teleop-icd-at-session-init</code>
+    </article>
+    <article class="card should" data-epic="epic-validate-teleop-input-against-icd">
+      <h3>Validate Tele-op Input Against Active ICD</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2955" target="_blank" rel="noopener">ET-2955</a><span class="chip">Should Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-validate-teleop-input-against-icd</code>
+    </article>
+  </div>
+</section>
+<section class="cap-detail" hidden data-capability="observable-runtime-state">
+  <div class="detail-head">
+    <button type="button" class="back">&larr; All capabilities</button>
+    <div class="detail-title"><h3>Observable Runtime State</h3><code class="detail-code">CAP-09</code><a class="cap-jira" href="https://asirobots.atlassian.net/browse/MCHTRNCS-266" target="_blank" rel="noopener">MCHTRNCS-266 &#8599;</a><span class="detail-n">1 epic</span></div>
+    <div class="cap">capreq-observable-runtime-state</div>
+  </div>
+  <div class="cards">
+    <article class="card must" data-epic="epic-report-execution-events-to-c2">
+      <h3>Report Path-Execution Events to C2</h3>
+      <div class="card-meta"><a class="key" href="https://asirobots.atlassian.net/browse/ET-2959" target="_blank" rel="noopener">ET-2959</a><span class="chip">Must Have</span><span class="chip">2TS: TBD</span></div>
+      <code class="slug">epic-report-execution-events-to-c2</code>
+    </article>
+  </div>
+</section></div>
+
+<script src="../../vendor/mermaid.min.js"></script>
+<script id="epic-data" type="application/json">[{"epic": "epic-accept-c2-movement-request", "nid": "n_epic_accept_c2_movement_request", "key": "ET-2951", "title": "Accept C2 Movement Request over Runtime ICD", "capability": "motion-authorization", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-acknowledge-path-to-c2", "nid": "n_epic_acknowledge_path_to_c2", "key": "ET-2965", "title": "Acknowledge Path Acceptance or Rejection to C2", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-confirm-auto-manual-in-auto", "nid": "n_epic_confirm_auto_manual_in_auto", "key": "ET-2958", "title": "Confirm Auto/Manual Switch in Auto", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-detect-teleop-link-loss-and-report", "nid": "n_epic_detect_teleop_link_loss_and_report", "key": "ET-2960", "title": "Detect and Report Tele-op Link / Motion-Auth Loss", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-no-video-stream-on-teleop-icd", "nid": "n_epic_no_video_stream_on_teleop_icd", "key": "ET-2961", "title": "No Video Stream on Tele-op ICD", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-publish-motion-authorization-state", "nid": "n_epic_publish_motion_authorization_state", "key": "ET-2952", "title": "Publish Motion-Authorization State and Diagnostics", "capability": "motion-authorization", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-publish-path-execution-telemetry", "nid": "n_epic_publish_path_execution_telemetry", "key": "ET-2953", "title": "Publish Path-Execution Telemetry and Completion", "capability": "path-execution-and-objectives-translation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-publish-teleop-override-notification", "nid": "n_epic_publish_teleop_override_notification", "key": "ET-2962", "title": "Publish Tele-op Override Notification", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-publish-teleop-situational-feedback", "nid": "n_epic_publish_teleop_situational_feedback", "key": "ET-2963", "title": "Publish Tele-op Situational-Awareness Feedback", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-publish-visible-operating-indications", "nid": "n_epic_publish_visible_operating_indications", "key": "ET-2956", "title": "Publish Visible Operating-Mode and Safe-State Indications", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-record-recovery-acknowledgment", "nid": "n_epic_record_recovery_acknowledgment", "key": "ET-2957", "title": "Record Recovery Acknowledgment", "capability": "motion-authorization", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-report-execution-events-to-c2", "nid": "n_epic_report_execution_events_to_c2", "key": "ET-2959", "title": "Report Path-Execution Events to C2", "capability": "observable-runtime-state", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-require-los-ack-at-session-init", "nid": "n_epic_require_los_ack_at_session_init", "key": "ET-2964", "title": "Require Line-of-Sight Acknowledgment at Session Init", "capability": "tele-operation", "priority": "Must Have", "tts": "TBD"}, {"epic": "epic-validate-teleop-icd-at-session-init", "nid": "n_epic_validate_teleop_icd_at_session_init", "key": "ET-2954", "title": "Validate Tele-op ICD at Session Initiation", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}, {"epic": "epic-validate-teleop-input-against-icd", "nid": "n_epic_validate_teleop_input_against_icd", "key": "ET-2955", "title": "Validate Tele-op Input Against Active ICD", "capability": "tele-operation", "priority": "Should Have", "tts": "TBD"}]</script>
+<script type="module">
+  /* A vendored bundle, if one was loaded above, has already set globalThis.mermaid;
+     otherwise fall back to the CDN so the page still renders. */
+  const mermaid = globalThis.mermaid
+    ?? (await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs")).default;
+
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "loose",
+    theme: dark ? "dark" : "default",
+    flowchart: { curve: "basis", nodeSpacing: 45, rankSpacing: 60, useMaxWidth: false },
+  });
+  await mermaid.run({ querySelector: "pre.mermaid" });
+
+  const EPICS = JSON.parse(document.getElementById("epic-data").textContent);
+  const byNodeId = new Map(EPICS.map(e => [e.nid, e]));
+
+  /* ---------- zoom + pan, per panel ---------- */
+  for (const panel of document.querySelectorAll(".panel")) {
+    const viewport = panel.querySelector(".viewport");
+    const canvas = panel.querySelector(".canvas");
+    const state = { scale: 1, x: 0, y: 0 };
+
+    const apply = () => {
+      canvas.style.transform =
+        `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+    };
+    const zoomBy = (factor, originX, originY) => {
+      const next = Math.min(4, Math.max(0.1, state.scale * factor));
+      const ratio = next / state.scale;
+      state.x = originX - (originX - state.x) * ratio;
+      state.y = originY - (originY - state.y) * ratio;
+      state.scale = next;
+      apply();
+    };
+    const fit = () => {
+      const svg = canvas.querySelector("svg");
+      if (!svg) return;
+      const box = svg.getBoundingClientRect();
+      const width = box.width / state.scale;
+      const height = box.height / state.scale;
+      if (!width || !height) return;
+      state.scale = Math.min(viewport.clientWidth / (width + 32),
+                             viewport.clientHeight / (height + 32), 1.5);
+      state.x = (viewport.clientWidth - width * state.scale) / 2;
+      state.y = 12;
+      apply();
+    };
+
+    viewport.addEventListener("wheel", event => {
+      event.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,
+             event.clientX - rect.left, event.clientY - rect.top);
+    }, { passive: false });
+
+    let dragging = false, lastX = 0, lastY = 0;
+    viewport.addEventListener("pointerdown", event => {
+      if (event.target.closest("a, .node")) return;   // let node links through
+      dragging = true; lastX = event.clientX; lastY = event.clientY;
+      viewport.classList.add("dragging");
+      viewport.setPointerCapture(event.pointerId);
+    });
+    viewport.addEventListener("pointermove", event => {
+      if (!dragging) return;
+      state.x += event.clientX - lastX;
+      state.y += event.clientY - lastY;
+      lastX = event.clientX; lastY = event.clientY;
+      apply();
+    });
+    const endDrag = () => { dragging = false; viewport.classList.remove("dragging"); };
+    viewport.addEventListener("pointerup", endDrag);
+    viewport.addEventListener("pointercancel", endDrag);
+
+    panel.querySelector(".zoom").addEventListener("click", event => {
+      const action = event.target.dataset.zoom;
+      if (!action) return;
+      const cx = viewport.clientWidth / 2, cy = viewport.clientHeight / 2;
+      if (action === "in") zoomBy(1.25, cx, cy);
+      else if (action === "out") zoomBy(1 / 1.25, cx, cy);
+      else if (action === "fit") fit();
+      else { state.scale = 1; state.x = 0; state.y = 0; apply(); }
+    });
+
+    fit();
+  }
+
+  /* ---------- search + filters ---------- */
+  const q = document.getElementById("q");
+  const fCapability = document.getElementById("f-capability");
+  const fPriority = document.getElementById("f-priority");
+  const fTts = document.getElementById("f-tts");
+  const count = document.getElementById("count");
+  const cards = [...document.querySelectorAll(".card")];
+  const cardByEpic = new Map(cards.map(c => [c.dataset.epic, c]));
+
+  const matches = epic => {
+    const term = q.value.trim().toLowerCase();
+    if (term && !(`${epic.title} ${epic.key} ${epic.epic}`.toLowerCase().includes(term)))
+      return false;
+    if (fCapability.value && epic.capability !== fCapability.value) return false;
+    if (fPriority.value && epic.priority !== fPriority.value) return false;
+    if (fTts.value && epic.tts !== fTts.value) return false;
+    return true;
+  };
+
+  const graphNodes = [...document.querySelectorAll(".panel .node")].map(el => {
+    const id = (el.id || "").replace(/^flowchart-/, "").replace(/-\d+$/, "");
+    return { el, epic: byNodeId.get(id) };
+  }).filter(n => n.epic);
+
+  /* ---------- inventory drill-down: capabilities -> epics ----------
+     Three view states, all driven by render():
+       overview - the capability tiles, nothing drilled in, no filters
+       detail   - one capability's epics, reached by clicking its tile
+       search   - a term or filter is active, so every capability that still
+                  has a visible card is shown and the tiles step aside      */
+  const overview = document.getElementById("overview");
+  const detailSections = [...document.querySelectorAll(".cap-detail")];
+  const detailCaps = new Set(detailSections.map(s => s.dataset.capability));
+  const home = document.getElementById("home");
+  const invCaption = document.getElementById("inv-caption");
+  let current = "";
+
+  const filtersActive = () =>
+    Boolean(q.value.trim() || fCapability.value || fPriority.value || fTts.value);
+
+  const render = () => {
+    const searching = filtersActive();
+    overview.hidden = searching || Boolean(current);
+    home.hidden = !(searching || current);
+    for (const section of detailSections) {
+      if (searching)
+        section.hidden = ![...section.querySelectorAll(".card")].some(c => !c.hidden);
+      else
+        section.hidden = section.dataset.capability !== current;
+    }
+    if (searching)
+      invCaption.textContent = "matches across all capabilities";
+    else if (current)
+      invCaption.textContent = "one capability - use Back for all of them";
+    else
+      invCaption.innerHTML = `${detailSections.length} capabilities &middot; ` +
+        `${EPICS.length} epics &middot; pick a capability to see its epics`;
+  };
+
+  const applyFilters = () => {
+    let shown = 0;
+    for (const epic of EPICS) {
+      const ok = matches(epic);
+      if (ok) shown++;
+      const card = cardByEpic.get(epic.epic);
+      if (card) card.hidden = !ok;
+    }
+    for (const node of graphNodes) node.el.classList.toggle("dim", !matches(node.epic));
+    count.textContent = `${shown} of ${EPICS.length} epics`;
+    render();
+  };
+
+  const clearFilters = () => {
+    q.value = ""; fCapability.value = ""; fPriority.value = ""; fTts.value = "";
+  };
+
+  /* Keep the hash in sync so a drilled-in view is linkable and Back works. */
+  const show = cap => {
+    current = detailCaps.has(cap) ? cap : "";
+    const hash = current ? "#cap=" + encodeURIComponent(current) : "";
+    if (hash !== location.hash)
+      history.pushState(null, "", hash || location.pathname + location.search);
+    applyFilters();
+  };
+
+  const readHash = () => {
+    const match = /^#cap=(.+)$/.exec(location.hash);
+    const wanted = match ? decodeURIComponent(match[1]) : "";
+    current = detailCaps.has(wanted) ? wanted : "";
+    applyFilters();
+  };
+
+  for (const tile of document.querySelectorAll(".tile"))
+    tile.addEventListener("click", () => { clearFilters(); show(tile.dataset.capability); });
+  for (const back of document.querySelectorAll(".back"))
+    back.addEventListener("click", () => { clearFilters(); show(""); });
+  home.addEventListener("click", () => { clearFilters(); show(""); });
+
+  for (const control of [q, fCapability, fPriority, fTts])
+    control.addEventListener("input", applyFilters);
+
+  document.getElementById("reset").addEventListener("click", () => {
+    clearFilters();
+    show("");
+  });
+
+  window.addEventListener("popstate", readHash);
+  window.addEventListener("hashchange", readHash);
+
+  readHash();
+</script>
+</body></html>

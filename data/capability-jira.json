@@ -1,0 +1,11 @@
+{
+  "blackbox-data-off-load-to-cloud": "MCHTRNCS-268",
+  "framework-packaging-extension-and-integration": "MCHTRNCS-264",
+  "motion-authorization": "MCHTRNCS-259",
+  "observable-runtime-state": "MCHTRNCS-266",
+  "obstacle-detection-and-avoidance": "MCHTRNCS-260",
+  "path-execution-and-objectives-translation": "MCHTRNCS-261",
+  "remote-all-stop-safety-capability": "MCHTRNCS-262",
+  "tele-operation": "MCHTRNCS-265",
+  "vehicle-kinematics-support": "MCHTRNCS-263"
+}

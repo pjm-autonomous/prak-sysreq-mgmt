@@ -1,0 +1,22 @@
+<p><b>Purpose:</b> Working sessions to evaluate &amp; decompose the 15 Electronics PRAK epics into stories with time estimates and dependencies. Data collection only — artifacts are produced outside the meeting.</p>
+<p><b>Scope:</b> <code>platform-team: Electronics</code> in prak-v-model — 15 epics across 4 capabilities (CAP-01 Motion Authorization, CAP-03 Path Execution and Objectives Translation, CAP-08 Tele-operation, CAP-09 Observable Runtime State). Tracked separately from Embedded-Core; the two share parent PRD Capability Requirements but no epics.</p>
+<p><b>Roles (RACI)</b> — confirm before first session; Embedded roles do not carry over automatically:<br>
+&bull; <b>Estimation &amp; decomposition (data):</b> Accountable — Patrick McKee (owns tracker + outputs; editor). Responsible — <b>TBD</b> (Electronics SME: estimates, story breakdown, owner assignment; editor). Consulted — <b>TBD</b> (capacity/feasibility). Informed — Clint Jones.<br>
+&bull; <b>2TS scope &amp; priority (decision):</b> Accountable — Clint Jones (PRAK PM owns 2TS scope). Consulted — <b>TBD</b>. Responsible — Patrick McKee (facilitate + record). Informed — <b>TBD</b>.</p>
+<p><b>Estimation unit:</b> all estimates in <b>DAYS</b> — keeps the tracker's Epic-total roll-up consistent (no story points).</p>
+<p><b>Tracker (live — we capture directly here):</b> <b>TBD</b> — the Electronics tracker does not exist yet. Until it does, the DAG is generated from prak-v-model.</p>
+<p><b>Jira:</b> the 15 epics are project <b>ET</b> (Electrical Team), keys ET-2951 through ET-2965. Their Jira parents are the shared PRD Capability Requirements (MCHTRNCS-259 Motion Authorization, MCHTRNCS-261 Path Execution and Objectives Translation, MCHTRNCS-265 Tele-operation, MCHTRNCS-266 Observable Runtime State) — the same parents the Embedded epics hang off. Note <b>ET</b>, not MCHTRNCS: a Jira search scoped to the Embedded project will not find these.</p>
+<p><b>Epic Evaluation Loop</b> (~4 min/epic)<br>
+1. System requirement clear after reading the epic? If not, mark <i>needs-info</i> and move on.<br>
+2. Required for 2TS? If yes, set priority rank.<br>
+3. How many stories to deliver this epic? Capture count + story titles.<br>
+4. Estimate time per story <b>in days</b>.<br>
+5. Roll-up (auto = story count &times; days/story).<br>
+6. Blocking epics by ID — <b>hard</b> (can't start) vs <b>soft</b> (can start, can't finish). <b>Blocking Epics resolves within THIS sheet only</b>; a dependency on an Embedded-Core epic is recorded at the capability level, not here.</p>
+<p><b>Agenda</b> (15 epics fit in two sessions)<br>
+0:00–0:05 &nbsp;(1) Epic batch selection — confirm ~8 pre-selected epics; set target count.<br>
+0:05–0:10 &nbsp;(2) Carryover &amp; blockers — resolve prior needs-info; add newly found dependencies (incl. cross-team to Embedded-Core).<br>
+0:10–0:45 &nbsp;(3) Evaluation loops — ~4 min/epic &times; 8.<br>
+0:45–0:53 &nbsp;(4) Assignment &amp; uncertainty — assign epic owners; flag IC follow-ups.<br>
+0:53–1:00 &nbsp;(5) Loop evaluation — completion rate vs plan, adjust schedule, review assignments.</p>
+<p><b>Output per meeting:</b> ~8 epics with refined day estimates, story count/breakdown, and blocking-epic dependencies.</p>

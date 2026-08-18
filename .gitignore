@@ -2,3 +2,8 @@ __pycache__/
 *.py[cod]
 .env
 .venv/
+
+# Raw Jira / Smartsheet exports. Public repo: these carry Atlassian account ids
+# and, in the ECR cost-field templates, internal labor rates. Commit pruned
+# derivatives (data/tracker-snapshot*.csv, data/capability-jira.json) instead.
+data/prak_jira_snapshot-*.csv

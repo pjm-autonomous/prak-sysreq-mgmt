@@ -16,7 +16,7 @@ Epic Evaluation Loop (~4 min/epic):
 3. How many stories to deliver this epic? Capture count + story titles (Michael assigns later for finer breakdown).
 4. Estimate time per story in DAYS.
 5. Roll-up (auto = story count × days/story).
-6. Blocking epics by ID — hard (can't start) vs soft (can start, can't finish); note cross-team blockers (GNC/ODOA) for initiative-level coordination.
+6. Blocking epics by ID — hard (can't start) vs soft (can start, can't finish); note cross-team blockers (GNC/ODOA) for capability-level coordination.
 
 Agenda:
 0:00–0:05  (1) Epic batch selection — confirm ~10 pre-selected epics; set target count.
