@@ -24,8 +24,8 @@ flowchart TB
   click n_epic_publish_motion_authorization_state "https://asirobots.atlassian.net/browse/ET-2952" _blank
   click n_epic_publish_visible_operating_indications "https://asirobots.atlassian.net/browse/ET-2956" _blank
   click n_external_epic_gate_continuous_motion_authorization "https://asirobots.atlassian.net/browse/MCHTRNCS-141" _blank
-  class n_epic_publish_motion_authorization_state should;
-  class n_epic_publish_visible_operating_indications must;
+  class n_epic_publish_motion_authorization_state should_tts;
+  class n_epic_publish_visible_operating_indications must_tts;
   class n_external_epic_gate_continuous_motion_authorization external;
 
 
@@ -58,9 +58,9 @@ flowchart TB
   click n_epic_publish_path_execution_telemetry "https://asirobots.atlassian.net/browse/ET-2953" _blank
   click n_epic_report_execution_events_to_c2 "https://asirobots.atlassian.net/browse/ET-2959" _blank
   click n_external_epic_execute_path_with_motion_limits "https://asirobots.atlassian.net/browse/MCHTRNCS-202" _blank
-  class n_epic_report_execution_events_to_c2 must;
+  class n_epic_report_execution_events_to_c2 must_tts;
   class n_external_epic_execute_path_with_motion_limits external;
-  class n_epic_publish_path_execution_telemetry should;
+  class n_epic_publish_path_execution_telemetry should_tts;
 
 
 %% chain 3
@@ -87,7 +87,7 @@ flowchart TB
   click n_epic_acknowledge_path_to_c2 "https://asirobots.atlassian.net/browse/ET-2965" _blank
   click n_external_epic_validate_supplied_path "https://asirobots.atlassian.net/browse/MCHTRNCS-209" _blank
   class n_external_epic_validate_supplied_path external;
-  class n_epic_acknowledge_path_to_c2 should;
+  class n_epic_acknowledge_path_to_c2 should_tts;
 
 
 %% chain 4
@@ -114,7 +114,7 @@ flowchart TB
   click n_epic_detect_teleop_link_loss_and_report "https://asirobots.atlassian.net/browse/ET-2960" _blank
   click n_external_epic_teleop_connection_loss_safe_behavior "https://asirobots.atlassian.net/browse/MCHTRNCS-212" _blank
   class n_external_epic_teleop_connection_loss_safe_behavior external;
-  class n_epic_detect_teleop_link_loss_and_report must;
+  class n_epic_detect_teleop_link_loss_and_report must_tts;
 
 
 %% chain 5
@@ -140,7 +140,7 @@ flowchart TB
   n_external_epic_withhold_motion_until_recovery_authorized -.->|guess| n_epic_record_recovery_acknowledgment
   click n_epic_record_recovery_acknowledgment "https://asirobots.atlassian.net/browse/ET-2957" _blank
   click n_external_epic_withhold_motion_until_recovery_authorized "https://asirobots.atlassian.net/browse/MCHTRNCS-130" _blank
-  class n_epic_record_recovery_acknowledgment must;
+  class n_epic_record_recovery_acknowledgment must_tts;
   class n_external_epic_withhold_motion_until_recovery_authorized external;
 
 
@@ -168,7 +168,7 @@ flowchart TB
   click n_epic_validate_teleop_icd_at_session_init "https://asirobots.atlassian.net/browse/ET-2954" _blank
   click n_external_epic_gate_teleop_session_on_motion_auth "https://asirobots.atlassian.net/browse/MCHTRNCS-210" _blank
   class n_external_epic_gate_teleop_session_on_motion_auth external;
-  class n_epic_validate_teleop_icd_at_session_init should;
+  class n_epic_validate_teleop_icd_at_session_init should_tts;
 
 
 %% chain 7
@@ -195,4 +195,4 @@ flowchart TB
   click n_epic_validate_teleop_input_against_icd "https://asirobots.atlassian.net/browse/ET-2955" _blank
   click n_external_epic_teleop_input_staleness_timeout "https://asirobots.atlassian.net/browse/MCHTRNCS-213" _blank
   class n_external_epic_teleop_input_staleness_timeout external;
-  class n_epic_validate_teleop_input_against_icd should;
+  class n_epic_validate_teleop_input_against_icd should_tts;

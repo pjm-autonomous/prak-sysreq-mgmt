@@ -1,5 +1,4 @@
-%% No dependencies recorded in the tracker's Blocking Epics column yet.
-%% All 87 epics are unblocked; see the HTML viewer for the inventory.
+%% chain 1
 flowchart TB
   classDef must fill:#b42318,stroke:#7a0b02,color:#ffffff;
   classDef should fill:#ffbf00,stroke:#8a6d00,color:#111827;
@@ -11,5 +10,22 @@ flowchart TB
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
   classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;
-  empty["No dependencies recorded yet<br/><small>fill in the tracker's Blocking Epics column</small>"]
-  class empty note;
+  subgraph sg_motion_authorization["motion-authorization"]
+    direction TB
+    n_epic_continuous_geofence_enforcement["Continuous Geofence<br/>Enforcement<br/><small>MCHTRNCS-269</small>"]
+  end
+  subgraph sg_obstacle_detection_and_avoidance["obstacle-detection-and-avoidance"]
+    direction TB
+    n_epic_emit_obstacle_stop_avoidance["Emit Obstacle Stop or<br/>Avoidance Actuation<br/><small>MCHTRNCS-200</small>"]
+  end
+  subgraph sg_other_tracker["other tracker"]
+    direction TB
+    n_external_ODOA_5527[/"ODOA-5527<br/><small>other tracker</small>"/]
+  end
+  n_external_ODOA_5527 --> n_epic_continuous_geofence_enforcement
+  n_external_ODOA_5527 --> n_epic_emit_obstacle_stop_avoidance
+  click n_epic_continuous_geofence_enforcement "https://asirobots.atlassian.net/browse/MCHTRNCS-269" _blank
+  click n_epic_emit_obstacle_stop_avoidance "https://asirobots.atlassian.net/browse/MCHTRNCS-200" _blank
+  class n_epic_continuous_geofence_enforcement must_tts;
+  class n_epic_emit_obstacle_stop_avoidance must_tts;
+  class n_external_ODOA_5527 external;
