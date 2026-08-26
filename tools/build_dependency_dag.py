@@ -444,11 +444,11 @@ def connected_components(nodes: set[str],
 
 
 CLASSDEFS = """  classDef must fill:#b42318,stroke:#7a0b02,color:#ffffff;
-  classDef should fill:#c2410c,stroke:#7a3c00,color:#ffffff;
+  classDef should fill:#ffbf00,stroke:#8a6d00,color:#111827;
   classDef could fill:#e6f0fd,stroke:#175cd3,color:#111827;
   classDef wont fill:#eceef2,stroke:#667085,color:#111827;
   classDef must_tts fill:#b42318,stroke:#7a0b02,stroke-width:4px,color:#ffffff;
-  classDef should_tts fill:#c2410c,stroke:#7a3c00,stroke-width:4px,color:#ffffff;
+  classDef should_tts fill:#ffbf00,stroke:#8a6d00,stroke-width:4px,color:#111827;
   classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
@@ -735,7 +735,7 @@ HTML_TEMPLATE = r"""<!doctype html>
     --bg: #ffffff; --fg: #111827; --muted: #667085; --line: #e4e7ec;
     --panel: #fbfcfd; --chip: #f2f4f7; --link: #175cd3; --accent: #175cd3;
     --must-bg: #b42318; --must-br: #7a0b02;
-    --should-bg: #c2410c; --should-br: #7a3c00;
+    --should-bg: #ffbf00; --should-br: #8a6d00;
     --could-bg: #e6f0fd; --could-br: #175cd3;
     --wont-bg: #eceef2; --wont-br: #667085;
   }
@@ -744,7 +744,7 @@ HTML_TEMPLATE = r"""<!doctype html>
       --bg: #0f1319; --fg: #e6e8ec; --muted: #98a2b3; --line: #2a3039;
       --panel: #161b22; --chip: #232a34; --link: #7cb0ff; --accent: #7cb0ff;
       --must-bg: #b42318; --must-br: #f2705d;
-      --should-bg: #c2410c; --should-br: #f5b544;
+      --should-bg: #ffbf00; --should-br: #f5b544;
       --could-bg: #14304f; --could-br: #7cb0ff;
       --wont-bg: #262b33; --wont-br: #98a2b3;
     }
@@ -755,6 +755,7 @@ HTML_TEMPLATE = r"""<!doctype html>
          line-height: 1.45; }
   a { color: var(--link); }
   .muted { color: var(--muted); font-size: .85rem; }
+  .crumb { margin: 0 0 .5rem; font-size: .85rem; }
 
   header { border-bottom: 1px solid var(--line); padding-bottom: .8rem; margin-bottom: 1rem; }
   h1 { font-size: 1.2rem; margin: 0 0 .4rem; }
@@ -765,7 +766,8 @@ HTML_TEMPLATE = r"""<!doctype html>
                  font-size: .78rem; border: 1px solid; color: var(--fg); }
   .lg-must { background: var(--must-bg); border-color: var(--must-br); }
   .lg-should { background: var(--should-bg); border-color: var(--should-br); }
-  .legend .lg-must, .legend .lg-should { color: #fff; }
+  .legend .lg-must { color: #fff; }
+  .legend .lg-should { color: #111827; }
   .lg-could { background: var(--could-bg); border-color: var(--could-br); }
   .lg-wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .lg-tts { border: 3px solid var(--fg); font-weight: 600; }
@@ -872,9 +874,12 @@ HTML_TEMPLATE = r"""<!doctype html>
   .card.wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .card.tts { border-width: 3px; }
   @media (prefers-color-scheme: dark) { .card { color: var(--fg); } }
-  /* Must/Should are solid red/orange in both themes, so force white text. */
-  .card.must, .card.should { color: #fff; }
-  .card.must a, .card.should a { color: #fff; }
+  /* Must is solid red (white text); Should is solid amber (black text). Force
+     both in either theme so the base/dark text colour never overrides them. */
+  .card.must { color: #fff; }
+  .card.should { color: #111827; }
+  .card.must a { color: #fff; }
+  .card.should a { color: #111827; }
   .card h3 { font-size: .87rem; margin: 0; font-weight: 600; line-height: 1.3; }
   .card-meta { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
   .card .key { font-size: .76rem; font-weight: 600; text-decoration: none; }
@@ -891,6 +896,7 @@ HTML_TEMPLATE = r"""<!doctype html>
 </style></head>
 <body>
 <header>
+  <p class="crumb"><a href="../../index.html">&larr; PRAK epic decomposition &mdash; all teams</a></p>
   <h1>__TITLE__</h1>
   <div class="stats">
     <span>__STATS__</span>
