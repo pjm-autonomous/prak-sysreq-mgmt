@@ -75,7 +75,7 @@
                  background: var(--bg); color: var(--fg); border: 1px solid var(--line);
                  border-radius: 5px; }
   .zoom button:hover { border-color: var(--accent); }
-  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
+  .viewport { height: 70vh; min-height: 11rem; overflow: hidden; position: relative;
               cursor: grab; background: var(--bg); }
   .viewport.dragging { cursor: grabbing; }
   .canvas { transform-origin: 0 0; padding: 1rem; }
@@ -159,7 +159,7 @@
   <h1>Electronics Epic Dependency DAG</h1>
   <div class="stats">
     <span>15 epics &middot; 4 capabilities &middot; 1 hard + 8 soft edges &middot; 7 external blockers &middot; 9 provisional</span>
-    <span>generated 2026-08-18 21:40 UTC</span>
+    <span>generated 2026-08-26 02:48 UTC</span>
     <span><a href="https://app.smartsheet.com/sheets/JXr3hJVXxXPm6HxWWQQ845G2568xRcG35vJHRJ31" target="_blank" rel="noopener">open tracker &#8599;</a></span>
   </div>
   <div class="legend">
@@ -197,7 +197,7 @@
   <span id="count"></span>
 </div>
 
-<h2>Dependency graph <span class="muted">16 of 15 epics have dependencies &middot; 7 independent chains &middot; scroll to zoom, drag to pan</span></h2>
+<h2>Dependency graph <span class="muted">9 of 15 epics have dependencies &middot; 7 independent chains &middot; the other 6 are unblocked &ndash; see the inventory below &middot; drag to pan &middot; +/&minus; or Ctrl/&#8984;+scroll to zoom</span></h2>
 <section class="panel" data-panel="1">
   <div class="panel-head">
     <h3>Chain 1</h3>
@@ -209,7 +209,7 @@
       <button type="button" data-zoom="reset">100%</button>
     </div>
   </div>
-  <div class="viewport"><div class="canvas"><pre class="mermaid">
+  <div class="viewport" style="height: clamp(11rem, 15rem, 70vh)"><div class="canvas"><pre class="mermaid">
 flowchart TB
   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
@@ -251,7 +251,7 @@ flowchart TB
       <button type="button" data-zoom="reset">100%</button>
     </div>
   </div>
-  <div class="viewport"><div class="canvas"><pre class="mermaid">
+  <div class="viewport" style="height: clamp(11rem, 15rem, 70vh)"><div class="canvas"><pre class="mermaid">
 flowchart TB
   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
@@ -296,7 +296,7 @@ flowchart TB
       <button type="button" data-zoom="reset">100%</button>
     </div>
   </div>
-  <div class="viewport"><div class="canvas"><pre class="mermaid">
+  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
 flowchart TB
   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
@@ -334,7 +334,7 @@ flowchart TB
       <button type="button" data-zoom="reset">100%</button>
     </div>
   </div>
-  <div class="viewport"><div class="canvas"><pre class="mermaid">
+  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
 flowchart TB
   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
@@ -372,7 +372,7 @@ flowchart TB
       <button type="button" data-zoom="reset">100%</button>
     </div>
   </div>
-  <div class="viewport"><div class="canvas"><pre class="mermaid">
+  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
 flowchart TB
   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
@@ -410,7 +410,7 @@ flowchart TB
       <button type="button" data-zoom="reset">100%</button>
     </div>
   </div>
-  <div class="viewport"><div class="canvas"><pre class="mermaid">
+  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
 flowchart TB
   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
@@ -448,7 +448,7 @@ flowchart TB
       <button type="button" data-zoom="reset">100%</button>
     </div>
   </div>
-  <div class="viewport"><div class="canvas"><pre class="mermaid">
+  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
 flowchart TB
   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
@@ -672,6 +672,10 @@ flowchart TB
     };
 
     viewport.addEventListener("wheel", event => {
+      // Plain wheel scrolls the page as usual; only zoom when a modifier is
+      // held (Ctrl, or Cmd on a Mac - trackpad pinch arrives as ctrl+wheel).
+      // Otherwise the tall stacked panels trap the page scroll.
+      if (!(event.ctrlKey || event.metaKey)) return;
       event.preventDefault();
       const rect = viewport.getBoundingClientRect();
       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,

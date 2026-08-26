@@ -701,6 +701,9 @@ def render_graph_panels(components: list[list[str]],
         member_edges = sum(1 for b, d, *_ in edges if b in members and d in members)
         externals_here = sum(1 for epic in group if is_external(epic))
         diagram = component_mermaid(group, records_by_epic, edges)
+        # Size the box to the chain instead of a flat 70vh, so a 2-node chain
+        # is short and seven small chains do not bury the inventory below them.
+        vh = f"clamp(11rem, {len(group) * 3 + 6}rem, 70vh)"
         panels.append(
             f'<section class="panel" data-panel="{index}">\n'
             f'  <div class="panel-head">\n'
@@ -715,7 +718,7 @@ def render_graph_panels(components: list[list[str]],
             f'      <button type="button" data-zoom="reset">100%</button>\n'
             f'    </div>\n'
             f'  </div>\n'
-            f'  <div class="viewport"><div class="canvas">'
+            f'  <div class="viewport" style="height: {vh}"><div class="canvas">'
             f'<pre class="mermaid">\n{diagram}</pre></div></div>\n'
             f'</section>'
         )
@@ -799,7 +802,7 @@ HTML_TEMPLATE = r"""<!doctype html>
                  background: var(--bg); color: var(--fg); border: 1px solid var(--line);
                  border-radius: 5px; }
   .zoom button:hover { border-color: var(--accent); }
-  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
+  .viewport { height: 70vh; min-height: 11rem; overflow: hidden; position: relative;
               cursor: grab; background: var(--bg); }
   .viewport.dragging { cursor: grabbing; }
   .canvas { transform-origin: 0 0; padding: 1rem; }
@@ -981,6 +984,10 @@ __MERMAID_LOADER__
     };
 
     viewport.addEventListener("wheel", event => {
+      // Plain wheel scrolls the page as usual; only zoom when a modifier is
+      // held (Ctrl, or Cmd on a Mac - trackpad pinch arrives as ctrl+wheel).
+      // Otherwise the tall stacked panels trap the page scroll.
+      if (!(event.ctrlKey || event.metaKey)) return;
       event.preventDefault();
       const rect = viewport.getBoundingClientRect();
       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,
@@ -1190,14 +1197,22 @@ def build_html(records: list[dict], components: list[list[str]],
         "tts": r["2TS Required"].strip() or "TBD",
     } for r in records]
 
-    connected = sum(len(g) for g in components)
+    # Count only this team's epics, not the external nodes drawn for context -
+    # otherwise the numerator can exceed len(records) ("16 of 15").
+    connected = sum(1 for g in components for epic in g if not is_external(epic))
+    unconnected = len(records) - connected
     if components:
-        caption = (f"{connected} of {len(records)} epics have dependencies "
-                   f"&middot; {len(components)} independent "
-                   f"{'chain' if len(components) == 1 else 'chains'} "
-                   "&middot; scroll to zoom, drag to pan")
+        parts = [f"{connected} of {len(records)} epics have dependencies",
+                 f"{len(components)} independent "
+                 f"{'chain' if len(components) == 1 else 'chains'}"]
+        if unconnected:
+            parts.append(f"the other {unconnected} are unblocked &ndash; "
+                         "see the inventory below")
+        parts.append("drag to pan &middot; +/&minus; or Ctrl/&#8984;+scroll to zoom")
+        caption = " &middot; ".join(parts)
     else:
-        caption = f"0 of {len(records)} epics have dependencies"
+        caption = (f"0 of {len(records)} epics have dependencies &middot; "
+                   "every epic is in the inventory below")
 
     note_html = (f'<div class="note">{esc_html(note)}</div>') if note else ""
 
