@@ -1,0 +1,320 @@
+From a4a61b591950650195d24a46fefb27ccf3359369 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 26 Aug 2026 01:35:29 +0000
+Subject: [PATCH] DAG viewer: fix scroll-hijack, size panels to content,
+ correct the count
+
+Three fixes to the shared viewer, so a populated DAG (Electronics today,
+Embedded once its blockers land) is navigable, not just Embedded's empty
+state:
+
+- Mouse wheel no longer zooms and traps the page. Plain wheel scrolls as
+  usual; zoom now needs Ctrl (or Cmd), which is also how a trackpad pinch
+  arrives. Without this, a viewer stuck on the first chain never scrolled
+  down to the others or to the inventory.
+- Each chain's panel is sized to the chain (clamp 11rem..70vh by node
+  count) instead of a flat 70vh. Seven small two-node chains no longer take
+  five screens and bury the inventory beneath them.
+- The graph caption counts only this team's epics, not the external
+  other-tracker nodes, so it reads "9 of 15" not "16 of 15", and names
+  where the unconnected epics are: the inventory below.
+
+Regenerated all three DAG viewers from the changed generator.
+---
+ .../dependency-dag.html                       | 24 ++++++++------
+ .../dependency-dag.example.html               | 16 ++++++----
+ .../dependency-dag/dependency-dag.html        | 10 ++++--
+ tools/build_dependency_dag.py                 | 31 ++++++++++++++-----
+ 4 files changed, 54 insertions(+), 27 deletions(-)
+
+diff --git a/agile-planning/dependency-dag-electronics/dependency-dag.html b/agile-planning/dependency-dag-electronics/dependency-dag.html
+index bc9f9ec..465454f 100644
+--- a/agile-planning/dependency-dag-electronics/dependency-dag.html
++++ b/agile-planning/dependency-dag-electronics/dependency-dag.html
+@@ -75,7 +75,7 @@
+                  background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+                  border-radius: 5px; }
+   .zoom button:hover { border-color: var(--accent); }
+-  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
++  .viewport { height: 70vh; min-height: 11rem; overflow: hidden; position: relative;
+               cursor: grab; background: var(--bg); }
+   .viewport.dragging { cursor: grabbing; }
+   .canvas { transform-origin: 0 0; padding: 1rem; }
+@@ -159,7 +159,7 @@
+   <h1>Electronics Epic Dependency DAG</h1>
+   <div class="stats">
+     <span>15 epics &middot; 4 capabilities &middot; 1 hard + 8 soft edges &middot; 7 external blockers &middot; 9 provisional</span>
+-    <span>generated 2026-08-18 21:40 UTC</span>
++    <span>generated 2026-08-26 02:48 UTC</span>
+     <span><a href="https://app.smartsheet.com/sheets/JXr3hJVXxXPm6HxWWQQ845G2568xRcG35vJHRJ31" target="_blank" rel="noopener">open tracker &#8599;</a></span>
+   </div>
+   <div class="legend">
+@@ -197,7 +197,7 @@
+   <span id="count"></span>
+ </div>
+ 
+-<h2>Dependency graph <span class="muted">16 of 15 epics have dependencies &middot; 7 independent chains &middot; scroll to zoom, drag to pan</span></h2>
++<h2>Dependency graph <span class="muted">9 of 15 epics have dependencies &middot; 7 independent chains &middot; the other 6 are unblocked &ndash; see the inventory below &middot; drag to pan &middot; +/&minus; or Ctrl/&#8984;+scroll to zoom</span></h2>
+ <section class="panel" data-panel="1">
+   <div class="panel-head">
+     <h3>Chain 1</h3>
+@@ -209,7 +209,7 @@
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 15rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -251,7 +251,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 15rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -296,7 +296,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -334,7 +334,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -372,7 +372,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -410,7 +410,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -448,7 +448,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -672,6 +672,10 @@ flowchart TB
+     };
+ 
+     viewport.addEventListener("wheel", event => {
++      // Plain wheel scrolls the page as usual; only zoom when a modifier is
++      // held (Ctrl, or Cmd on a Mac - trackpad pinch arrives as ctrl+wheel).
++      // Otherwise the tall stacked panels trap the page scroll.
++      if (!(event.ctrlKey || event.metaKey)) return;
+       event.preventDefault();
+       const rect = viewport.getBoundingClientRect();
+       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,
+diff --git a/agile-planning/dependency-dag/dependency-dag.example.html b/agile-planning/dependency-dag/dependency-dag.example.html
+index 4186154..c4e5a65 100644
+--- a/agile-planning/dependency-dag/dependency-dag.example.html
++++ b/agile-planning/dependency-dag/dependency-dag.example.html
+@@ -75,7 +75,7 @@
+                  background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+                  border-radius: 5px; }
+   .zoom button:hover { border-color: var(--accent); }
+-  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
++  .viewport { height: 70vh; min-height: 11rem; overflow: hidden; position: relative;
+               cursor: grab; background: var(--bg); }
+   .viewport.dragging { cursor: grabbing; }
+   .canvas { transform-origin: 0 0; padding: 1rem; }
+@@ -159,7 +159,7 @@
+   <h1>Embedded-Core Epic Dependency DAG</h1>
+   <div class="stats">
+     <span>87 epics &middot; 9 capabilities &middot; 8 hard + 1 soft edges</span>
+-    <span>generated 2026-08-18 21:40 UTC</span>
++    <span>generated 2026-08-26 02:48 UTC</span>
+     <span><a href="https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1" target="_blank" rel="noopener">open tracker &#8599;</a></span>
+   </div>
+   <div class="legend">
+@@ -197,7 +197,7 @@
+   <span id="count"></span>
+ </div>
+ 
+-<h2>Dependency graph <span class="muted">12 of 87 epics have dependencies &middot; 3 independent chains &middot; scroll to zoom, drag to pan</span></h2>
++<h2>Dependency graph <span class="muted">12 of 87 epics have dependencies &middot; 3 independent chains &middot; the other 75 are unblocked &ndash; see the inventory below &middot; drag to pan &middot; +/&minus; or Ctrl/&#8984;+scroll to zoom</span></h2>
+ <section class="panel" data-panel="1">
+   <div class="panel-head">
+     <h3>Chain 1</h3>
+@@ -209,7 +209,7 @@
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 24rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -257,7 +257,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 18rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -297,7 +297,7 @@ flowchart TB
+       <button type="button" data-zoom="reset">100%</button>
+     </div>
+   </div>
+-  <div class="viewport"><div class="canvas"><pre class="mermaid">
++  <div class="viewport" style="height: clamp(11rem, 12rem, 70vh)"><div class="canvas"><pre class="mermaid">
+ flowchart TB
+   classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
+   classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+@@ -955,6 +955,10 @@ flowchart TB
+     };
+ 
+     viewport.addEventListener("wheel", event => {
++      // Plain wheel scrolls the page as usual; only zoom when a modifier is
++      // held (Ctrl, or Cmd on a Mac - trackpad pinch arrives as ctrl+wheel).
++      // Otherwise the tall stacked panels trap the page scroll.
++      if (!(event.ctrlKey || event.metaKey)) return;
+       event.preventDefault();
+       const rect = viewport.getBoundingClientRect();
+       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,
+diff --git a/agile-planning/dependency-dag/dependency-dag.html b/agile-planning/dependency-dag/dependency-dag.html
+index 0ffee5c..39c7f13 100644
+--- a/agile-planning/dependency-dag/dependency-dag.html
++++ b/agile-planning/dependency-dag/dependency-dag.html
+@@ -75,7 +75,7 @@
+                  background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+                  border-radius: 5px; }
+   .zoom button:hover { border-color: var(--accent); }
+-  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
++  .viewport { height: 70vh; min-height: 11rem; overflow: hidden; position: relative;
+               cursor: grab; background: var(--bg); }
+   .viewport.dragging { cursor: grabbing; }
+   .canvas { transform-origin: 0 0; padding: 1rem; }
+@@ -159,7 +159,7 @@
+   <h1>Embedded-Core Epic Dependency DAG</h1>
+   <div class="stats">
+     <span>87 epics &middot; 9 capabilities &middot; 0 hard + 0 soft edges</span>
+-    <span>generated 2026-08-18 21:40 UTC</span>
++    <span>generated 2026-08-26 02:48 UTC</span>
+     <span><a href="https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1" target="_blank" rel="noopener">open tracker &#8599;</a></span>
+   </div>
+   <div class="legend">
+@@ -197,7 +197,7 @@
+   <span id="count"></span>
+ </div>
+ 
+-<h2>Dependency graph <span class="muted">0 of 87 epics have dependencies</span></h2>
++<h2>Dependency graph <span class="muted">0 of 87 epics have dependencies &middot; every epic is in the inventory below</span></h2>
+ <div class="empty">
+   <p><strong>No dependencies recorded yet.</strong></p>
+   <p>Every epic below is currently unblocked. Edges appear here as soon as the
+@@ -842,6 +842,10 @@
+     };
+ 
+     viewport.addEventListener("wheel", event => {
++      // Plain wheel scrolls the page as usual; only zoom when a modifier is
++      // held (Ctrl, or Cmd on a Mac - trackpad pinch arrives as ctrl+wheel).
++      // Otherwise the tall stacked panels trap the page scroll.
++      if (!(event.ctrlKey || event.metaKey)) return;
+       event.preventDefault();
+       const rect = viewport.getBoundingClientRect();
+       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,
+diff --git a/tools/build_dependency_dag.py b/tools/build_dependency_dag.py
+index 71e13e9..bb8c34f 100755
+--- a/tools/build_dependency_dag.py
++++ b/tools/build_dependency_dag.py
+@@ -701,6 +701,9 @@ def render_graph_panels(components: list[list[str]],
+         member_edges = sum(1 for b, d, *_ in edges if b in members and d in members)
+         externals_here = sum(1 for epic in group if is_external(epic))
+         diagram = component_mermaid(group, records_by_epic, edges)
++        # Size the box to the chain instead of a flat 70vh, so a 2-node chain
++        # is short and seven small chains do not bury the inventory below them.
++        vh = f"clamp(11rem, {len(group) * 3 + 6}rem, 70vh)"
+         panels.append(
+             f'<section class="panel" data-panel="{index}">\n'
+             f'  <div class="panel-head">\n'
+@@ -715,7 +718,7 @@ def render_graph_panels(components: list[list[str]],
+             f'      <button type="button" data-zoom="reset">100%</button>\n'
+             f'    </div>\n'
+             f'  </div>\n'
+-            f'  <div class="viewport"><div class="canvas">'
++            f'  <div class="viewport" style="height: {vh}"><div class="canvas">'
+             f'<pre class="mermaid">\n{diagram}</pre></div></div>\n'
+             f'</section>'
+         )
+@@ -799,7 +802,7 @@ HTML_TEMPLATE = r"""<!doctype html>
+                  background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+                  border-radius: 5px; }
+   .zoom button:hover { border-color: var(--accent); }
+-  .viewport { height: 70vh; min-height: 22rem; overflow: hidden; position: relative;
++  .viewport { height: 70vh; min-height: 11rem; overflow: hidden; position: relative;
+               cursor: grab; background: var(--bg); }
+   .viewport.dragging { cursor: grabbing; }
+   .canvas { transform-origin: 0 0; padding: 1rem; }
+@@ -981,6 +984,10 @@ __MERMAID_LOADER__
+     };
+ 
+     viewport.addEventListener("wheel", event => {
++      // Plain wheel scrolls the page as usual; only zoom when a modifier is
++      // held (Ctrl, or Cmd on a Mac - trackpad pinch arrives as ctrl+wheel).
++      // Otherwise the tall stacked panels trap the page scroll.
++      if (!(event.ctrlKey || event.metaKey)) return;
+       event.preventDefault();
+       const rect = viewport.getBoundingClientRect();
+       zoomBy(event.deltaY < 0 ? 1.12 : 1 / 1.12,
+@@ -1190,14 +1197,22 @@ def build_html(records: list[dict], components: list[list[str]],
+         "tts": r["2TS Required"].strip() or "TBD",
+     } for r in records]
+ 
+-    connected = sum(len(g) for g in components)
++    # Count only this team's epics, not the external nodes drawn for context -
++    # otherwise the numerator can exceed len(records) ("16 of 15").
++    connected = sum(1 for g in components for epic in g if not is_external(epic))
++    unconnected = len(records) - connected
+     if components:
+-        caption = (f"{connected} of {len(records)} epics have dependencies "
+-                   f"&middot; {len(components)} independent "
+-                   f"{'chain' if len(components) == 1 else 'chains'} "
+-                   "&middot; scroll to zoom, drag to pan")
++        parts = [f"{connected} of {len(records)} epics have dependencies",
++                 f"{len(components)} independent "
++                 f"{'chain' if len(components) == 1 else 'chains'}"]
++        if unconnected:
++            parts.append(f"the other {unconnected} are unblocked &ndash; "
++                         "see the inventory below")
++        parts.append("drag to pan &middot; +/&minus; or Ctrl/&#8984;+scroll to zoom")
++        caption = " &middot; ".join(parts)
+     else:
+-        caption = f"0 of {len(records)} epics have dependencies"
++        caption = (f"0 of {len(records)} epics have dependencies &middot; "
++                   "every epic is in the inventory below")
+ 
+     note_html = (f'<div class="note">{esc_html(note)}</div>') if note else ""
+ 
+-- 
+2.43.0
+
