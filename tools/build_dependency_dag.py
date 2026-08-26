@@ -443,12 +443,12 @@ def connected_components(nodes: set[str],
     return components
 
 
-CLASSDEFS = """  classDef must fill:#fde4e1,stroke:#b42318,color:#111827;
-  classDef should fill:#fff3d6,stroke:#b25e09,color:#111827;
+CLASSDEFS = """  classDef must fill:#b42318,stroke:#7a0b02,color:#ffffff;
+  classDef should fill:#c2410c,stroke:#7a3c00,color:#ffffff;
   classDef could fill:#e6f0fd,stroke:#175cd3,color:#111827;
   classDef wont fill:#eceef2,stroke:#667085,color:#111827;
-  classDef must_tts fill:#fde4e1,stroke:#7a0b02,stroke-width:4px,color:#111827;
-  classDef should_tts fill:#fff3d6,stroke:#7a3c00,stroke-width:4px,color:#111827;
+  classDef must_tts fill:#b42318,stroke:#7a0b02,stroke-width:4px,color:#ffffff;
+  classDef should_tts fill:#c2410c,stroke:#7a3c00,stroke-width:4px,color:#ffffff;
   classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
@@ -688,7 +688,8 @@ def render_graph_panels(components: list[list[str]],
         return (
             '<div class="empty">\n'
             '  <p><strong>No dependencies recorded yet.</strong></p>\n'
-            '  <p>Every epic below is currently unblocked. Edges appear here as soon as the\n'
+            '  <p>Every epic is currently unblocked; the full list is in the inventory\n'
+            '     above. Edges appear here as soon as the\n'
             "     tracker's <strong>Blocking Epics</strong> column is filled in during the\n"
             '     evaluation meetings - list the epics that must finish first, tagged\n'
             '     <code>(hard)</code> or <code>(soft)</code>, then re-run the generator.</p>\n'
@@ -722,7 +723,7 @@ def render_graph_panels(components: list[list[str]],
             f'<pre class="mermaid">\n{diagram}</pre></div></div>\n'
             f'</section>'
         )
-    return "\n".join(panels)
+    return '<div class="panels">\n' + "\n".join(panels) + "\n</div>"
 
 
 HTML_TEMPLATE = r"""<!doctype html>
@@ -733,8 +734,8 @@ HTML_TEMPLATE = r"""<!doctype html>
   :root {
     --bg: #ffffff; --fg: #111827; --muted: #667085; --line: #e4e7ec;
     --panel: #fbfcfd; --chip: #f2f4f7; --link: #175cd3; --accent: #175cd3;
-    --must-bg: #fde4e1; --must-br: #b42318;
-    --should-bg: #fff3d6; --should-br: #b25e09;
+    --must-bg: #b42318; --must-br: #7a0b02;
+    --should-bg: #c2410c; --should-br: #7a3c00;
     --could-bg: #e6f0fd; --could-br: #175cd3;
     --wont-bg: #eceef2; --wont-br: #667085;
   }
@@ -742,8 +743,8 @@ HTML_TEMPLATE = r"""<!doctype html>
     :root {
       --bg: #0f1319; --fg: #e6e8ec; --muted: #98a2b3; --line: #2a3039;
       --panel: #161b22; --chip: #232a34; --link: #7cb0ff; --accent: #7cb0ff;
-      --must-bg: #4a1c17; --must-br: #f2705d;
-      --should-bg: #4a3410; --should-br: #f5b544;
+      --must-bg: #b42318; --must-br: #f2705d;
+      --should-bg: #c2410c; --should-br: #f5b544;
       --could-bg: #14304f; --could-br: #7cb0ff;
       --wont-bg: #262b33; --wont-br: #98a2b3;
     }
@@ -764,6 +765,7 @@ HTML_TEMPLATE = r"""<!doctype html>
                  font-size: .78rem; border: 1px solid; color: var(--fg); }
   .lg-must { background: var(--must-bg); border-color: var(--must-br); }
   .lg-should { background: var(--should-bg); border-color: var(--should-br); }
+  .legend .lg-must, .legend .lg-should { color: #fff; }
   .lg-could { background: var(--could-bg); border-color: var(--could-br); }
   .lg-wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .lg-tts { border: 3px solid var(--fg); font-weight: 600; }
@@ -792,7 +794,10 @@ HTML_TEMPLATE = r"""<!doctype html>
   .empty p { margin: .3rem 0; }
   .empty code { background: var(--chip); padding: .05rem .3rem; border-radius: 4px; }
 
-  .panel { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 1rem;
+  /* Chains are taller than wide, so pack several per row on wide screens. */
+  .panels { display: grid; gap: 1rem; align-items: start;
+            grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr)); }
+  .panel { border: 1px solid var(--line); border-radius: 8px;
            background: var(--panel); overflow: hidden; }
   .panel-head { display: flex; align-items: center; gap: .7rem; padding: .45rem .7rem;
                 border-bottom: 1px solid var(--line); }
@@ -867,6 +872,9 @@ HTML_TEMPLATE = r"""<!doctype html>
   .card.wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .card.tts { border-width: 3px; }
   @media (prefers-color-scheme: dark) { .card { color: var(--fg); } }
+  /* Must/Should are solid red/orange in both themes, so force white text. */
+  .card.must, .card.should { color: #fff; }
+  .card.must a, .card.should a { color: #fff; }
   .card h3 { font-size: .87rem; margin: 0; font-weight: 600; line-height: 1.3; }
   .card-meta { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; }
   .card .key { font-size: .76rem; font-weight: 600; text-decoration: none; }
@@ -924,12 +932,12 @@ HTML_TEMPLATE = r"""<!doctype html>
   <span id="count"></span>
 </div>
 
-<h2>Dependency graph <span class="muted">__GRAPH_CAPTION__</span></h2>
-__PANELS__
-
 <h2>Epic inventory <span class="muted" id="inv-caption"></span></h2>
 <div id="overview">__TILES__</div>
 <div id="details">__CARDS__</div>
+
+<h2>Dependency graph <span class="muted">__GRAPH_CAPTION__</span></h2>
+__PANELS__
 
 __MERMAID_LOADER__
 <script id="epic-data" type="application/json">__DATA__</script>
@@ -1207,12 +1215,12 @@ def build_html(records: list[dict], components: list[list[str]],
                  f"{'chain' if len(components) == 1 else 'chains'}"]
         if unconnected:
             parts.append(f"the other {unconnected} are unblocked &ndash; "
-                         "see the inventory below")
+                         "see the inventory above")
         parts.append("drag to pan &middot; +/&minus; or Ctrl/&#8984;+scroll to zoom")
         caption = " &middot; ".join(parts)
     else:
         caption = (f"0 of {len(records)} epics have dependencies &middot; "
-                   "every epic is in the inventory below")
+                   "every epic is in the inventory above")
 
     note_html = (f'<div class="note">{esc_html(note)}</div>') if note else ""
 
