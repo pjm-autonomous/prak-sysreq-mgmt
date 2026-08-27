@@ -75,13 +75,25 @@ The capability id, title, priority and Jira Initiative key now all come from
       committed cache correctly reflects that, and `capability-jira.json` supplies
       all 9 keys with a per-run stderr note naming them. Output is identical
       either way — the only difference is which file the key came from.
-- [ ] **Set the `VMODEL_READ_TOKEN` repo secret** so the scheduled refresh can
-      check out `asirobots/prak-v-model` (INTERNAL) and regenerate the capability
-      cache from source:
+- [x] ~~**Set the `VMODEL_READ_TOKEN` repo secret**~~ Done 2026-08-27. The
+      scheduled refresh now checks out `asirobots/prak-v-model` and regenerates
+      the capability cache from source. Verified by A/B dispatch: run
+      `33106528297` (secret unset) logged
+      `note: .../.vmodel not checked out ... may be stale` and raised the
+      "capability source unavailable" notice; run `33107998379` (secret set)
+      logged `capability source checked out at .vmodel`, raised no such notice,
+      and committed nothing — correct, because the cache already matched
+      `prak-v-model` `main`.
 
-      ```bash
-      gh secret set VMODEL_READ_TOKEN --repo pjm-autonomous/prak-sysreq-mgmt
-      ```
+      > **⚠ EXPIRES Wed 16 Sep 2026.** `friday github_review — brief` is a
+      > 30-day token issued 17 Aug 2026. On expiry the checkout starts failing,
+      > `continue-on-error` masks it, and **the job stays green** — the only
+      > signal is the notice and job summary from the "Did the capability source
+      > land?" step. Treat that date as a decision point, not a renewal chore:
+      > regenerating this token invalidates it wherever Friday uses it (its value
+      > is held server-side by the claude.ai connector and cannot be read back),
+      > so the better move is minting the dedicated `prak-v-model` +
+      > Contents:Read PAT below.
 
       **Decision 2026-08-26: reuse the existing `friday github_review` PAT.**
       Accepted with eyes open, after the two tighter options were ruled out:
@@ -90,7 +102,7 @@ The capability id, title, priority and Jira Initiative key now all come from
       |--------|---------|
       | Read-only deploy key | **Blocked.** asirobots disables deploy keys by org/enterprise policy — HTTP 422 "Deploy keys are disabled for this repository". Enabling them is a global policy change, not a repo-admin toggle. Do not retry this. |
       | New narrow PAT (`asirobots` owner, prak-v-model only, Contents:Read) | Viable, needs an ASI approval round. Deferred, not rejected. |
-      | Reuse `friday github_review` | **Chosen.** Works today, no approval. |
+      | Reuse `friday github_review` | **Chosen.** Works today, no approval. Read access to `prak-v-model` confirmed 2026-08-26 — both the Contents permission and the repository scope. |
 
       Two known, accepted consequences:
 
@@ -108,7 +120,9 @@ The capability id, title, priority and Jira Initiative key now all come from
          `.vmodel/product/requirements/product`.
 
 - [ ] **Narrow `VMODEL_READ_TOKEN` to a dedicated Contents:Read PAT.** Follow-up
-      to the decision above, whenever an ASI approval round is convenient. Nothing
+      to the decision above. **Do this by 16 Sep 2026**, when the shared token
+      expires — that is the natural moment, since the alternative is regenerating
+      a token other tooling depends on. Nothing
       in the workflow changes — same secret name, same `token:` input — so this is
       a pure credential swap. Resource owner must be `asirobots`, not the personal
       account; getting that wrong yields a 404 that reads like a typo'd repo name.
