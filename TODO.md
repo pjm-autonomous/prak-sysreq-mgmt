@@ -2,22 +2,24 @@
 
 prak-sysreq-mgmt **In-Progress: tooling complete, decomposition not started**
 
-Owner: Patrick McKee, serving as SE for both VSP-Embedded and Electronics.
-Last updated 2026-08-18.
+Owner: Patrick McKee, serving as SE for VSP-Embedded and Electronics.
+Last updated 2026-08-26.
 
 ## Where this stands
 
-The generator, both DAGs, the published site, and the agendas are done. What is
-outstanding is **data**, not code: 102 epics are loaded and grouped, but none has
-been through an evaluation meeting.
+The generator, the DAGs, the published site, and the agendas are done. What is
+outstanding is **data**, not code: 102 epics are loaded and grouped across the two
+live teams, 32 of them evaluated, and only 11 rows carry a dependency. Three more
+teams — ODOA, GNC, Mobius — are registered containers with nothing in them yet.
 
-| | Embedded-Core | Electronics |
-|---|---:|---:|
-| Epics | 87 | 15 |
-| Capabilities | 9 | 4 |
-| Evaluated (`2TS Required` set) | 0 | 0 |
-| Dependencies recorded | 0 | 9, all provisional |
-| Tracker | live | live |
+| | Embedded-Core | Electronics | ODOA | GNC | Mobius |
+|---|---:|---:|---:|---:|---:|
+| Epics | 87 | 15 | — | — | — |
+| Capabilities | 9 | 4 | — | — | — |
+| Evaluated (`2TS Required` set) | 17 | 15 | — | — | — |
+| Rows with dependencies recorded | 2 | 9, all provisional | — | — | — |
+| Tracker | live | live | none | none | none |
+| Jira project | `MCHTRNCS` | `ET` | `ODOA` | `GNC` | `MP` |
 
 Published: https://pjm-autonomous.github.io/prak-sysreq-mgmt/ (rebuilds on push).
 
@@ -28,9 +30,132 @@ Published: https://pjm-autonomous.github.io/prak-sysreq-mgmt/ (rebuilds on push)
 2. After any meeting: export the sheet to CSV, then
    `python3 tools/build_dependency_dag.py --team <t> --csv <export>` and
    `python3 tools/build_index.py`, commit, push. The site updates itself.
-3. If IT ticket #help00004986 has landed, set `SMARTSHEET_ACCESS_TOKEN` and
-   switch to `--live`; then `gh auth refresh -s workflow` and commit
-   `.github/workflows/refresh-dag.yml` to automate the whole loop.
+3. If IT ticket #help00004986 has landed, mint the Smartsheet personal API
+   token, set `SMARTSHEET_ACCESS_TOKEN` locally for `--live`, and add it as a
+   repo secret so `.github/workflows/refresh-dag.yml` (already committed, cron
+   07:00 UTC weekdays) stops failing on its token check.
+
+## Fixed 2026-08-26: the offline refresh never wrote a snapshot
+
+Found by test-running a fresh Embedded export through the documented loop.
+PUBLISHING.md said `build_dependency_dag.py --csv <export>` rebuilt "that team's
+snapshot + DAG" — it never wrote a snapshot at all, so following the documented
+procedure regenerated the DAG while leaving `data/<team>/tracker-snapshot.csv`
+untouched, and `build_index.py` kept reporting the previous progress numbers off
+the stale file. That is the exact failure the generator's own comments warn about,
+and it applied to the *only* refresh route available until the Smartsheet token
+lands.
+
+- [x] ~~Add `--from-csv` to `tools/export_snapshot.py`~~ so a hand export goes
+      through the same prune-and-sort as `--live`. Verified: re-running the loop
+      over the 2026-08-26 export reproduces the committed snapshot byte-for-byte
+      and leaves the DAG identical apart from its timestamp.
+- [x] ~~Correct the PUBLISHING.md refresh loop~~ to the real 5 steps.
+
+Related: output is input-order dependent. The live route sorts by epic id, a raw
+export is in tracker row order, so pointing the generator straight at an export
+reorders the whole epic-data block in the viewer. Routing both through
+`export_snapshot.py` is what keeps the committed HTML from churning.
+
+## Capability layer: finish the move to prak-v-model frontmatter
+
+The capability id, title, priority and Jira Initiative key now all come from
+`capreq-*.md` frontmatter in `asirobots/prak-v-model`. Three things close it out:
+
+- [ ] **Land the upstream `jira-key` change.** Adds `jira-key:` to the 9 capreqs
+      that have a Jira Initiative, plus the field in
+      `templates/capability-requirement.md`. Local branch `feat/capreq-jira-key`,
+      **unpushed, queued behind PR #34** (*Feature/mission objectives use cases*).
+      Rebased onto `main` @ `063b2f2` (post-#32) so it is ready to push when #34
+      clears. Verified: `validate-artifacts` clean over 340 files, `dist/`
+      unchanged, all 9 keys confirmed against Jira as `Initiative` issues whose
+      Summary title matches the capreq title.
+
+      **This repo does not wait on it.** `main` has no `jira-key` today, the
+      committed cache correctly reflects that, and `capability-jira.json` supplies
+      all 9 keys with a per-run stderr note naming them. Output is identical
+      either way — the only difference is which file the key came from.
+- [ ] **Set the `VMODEL_READ_TOKEN` repo secret** so the scheduled refresh can
+      check out `asirobots/prak-v-model` (INTERNAL) and regenerate the capability
+      cache from source:
+
+      ```bash
+      gh secret set VMODEL_READ_TOKEN --repo pjm-autonomous/prak-sysreq-mgmt
+      ```
+
+      **Decision 2026-08-26: reuse the existing `friday github_review` PAT.**
+      Accepted with eyes open, after the two tighter options were ruled out:
+
+      | Option | Outcome |
+      |--------|---------|
+      | Read-only deploy key | **Blocked.** asirobots disables deploy keys by org/enterprise policy — HTTP 422 "Deploy keys are disabled for this repository". Enabling them is a global policy change, not a repo-admin toggle. Do not retry this. |
+      | New narrow PAT (`asirobots` owner, prak-v-model only, Contents:Read) | Viable, needs an ASI approval round. Deferred, not rejected. |
+      | Reuse `friday github_review` | **Chosen.** Works today, no approval. |
+
+      Two known, accepted consequences:
+
+      1. **Blast radius.** That PAT carries read on actions, discussions, issues,
+         merge queues, pages and pull requests across asirobots — far more than
+         the `Contents:Read` this job uses — and it now sits in a *public* repo's
+         secret store. Anyone who gains write on this repo can read all of it.
+         Fork PRs cannot reach it (no `pull_request` trigger), so the exposure is
+         write-access-to-this-repo, which today is one person.
+      2. **Lifecycle coupling.** Rotating or revoking it for the review tooling
+         breaks this job. Because the checkout is `continue-on-error`, that would
+         degrade the refresh to cached capability labels *silently* — so the
+         "Did the capability source land?" step was added to post a `::notice::`
+         and a job-summary warning when the checkout does not produce
+         `.vmodel/product/requirements/product`.
+
+- [ ] **Narrow `VMODEL_READ_TOKEN` to a dedicated Contents:Read PAT.** Follow-up
+      to the decision above, whenever an ASI approval round is convenient. Nothing
+      in the workflow changes — same secret name, same `token:` input — so this is
+      a pure credential swap. Resource owner must be `asirobots`, not the personal
+      account; getting that wrong yields a 404 that reads like a typo'd repo name.
+      Verify with a *Contents* call, not a repo call:
+      `gh api repos/asirobots/prak-v-model/contents/product/requirements/product`
+      should return 15 entries — `gh api repos/asirobots/prak-v-model` succeeds on
+      Metadata alone and proves nothing.
+
+      Placement, if ever redone: the secret belongs on
+      **`pjm-autonomous/prak-sysreq-mgmt`** (the repo whose workflow *runs*), under
+      *Settings > Secrets and variables > **Actions***, never on prak-v-model and
+      never under the Agents tab — Agents secrets are for Copilot coding-agent
+      sessions and are invisible to `${{ secrets.* }}` in a workflow run.
+
+- [ ] **Delete `data/shared/capability-jira.json`** and `merge_capability_jira()`
+      once the PR is merged and every capreq in `main` carries `jira-key`. The
+      generator prints a note naming any slug still relying on the legacy file,
+      so an empty note means it is safe to remove.
+
+The 6 capabilities with no Jira Initiative (`developer-tooling-update-path`,
+`perception-for-manipulation`, `robot-localization`, `robot-web-application`,
+`software-update-and-rollback`, `video-recording-and-streaming`) are
+deliberately left without the field rather than given a placeholder.
+
+## ODOA / GNC / Mobius - registered, not onboarded
+
+Containers exist and the registry knows them; nothing else does.
+
+| | ODOA | GNC | Mobius |
+|---|---|---|---|
+| Jira project | `ODOA` (ODOA Platform) | `GNC` (GNC Platform) | `MP` (Mobius Platform) |
+| PRAK epics in Jira | none yet | none yet | none yet |
+| Smartsheet tracker | none | none | none |
+| Container | `data/odoa/`, `agile-planning/odoa/` | `data/gnc/`, `agile-planning/gnc/` | `data/mobius/`, `agile-planning/mobius/` |
+
+- [ ] Decompose each scope through [WORKFLOW.md](WORKFLOW.md) steps 1-11 and
+      import the epics to Jama and Jira.
+- [ ] Stand up each team's Smartsheet tracker from the shared template
+      (steps 12-14), then set `sheet_id`, `sheet_url`, and `refresh: True` in
+      that team's entry in `tools/teams.py`. Nothing else needs editing - the
+      snapshot path, output directory, and agenda path all derive from the slug.
+- [ ] Write each team's `agile-planning/<slug>/standingagenda.*` once the epic
+      count and cadence are known.
+- [ ] **`ODOA-5527` is already named as a blocker** in the Embedded-Core
+      tracker. It renders as an external node under *other tracker* today; once
+      ODOA has a snapshot it resolves to a real epic with a title and Jira link.
+      Confirm the id is right before the ODOA decomposition starts.
 
 ## Electronics Epic Dependency DAG
 
@@ -93,13 +218,21 @@ for context and excluded from the referencing team's counts.
 
 - [ ] Populate `Blocking Epics` in the tracker during the evaluation meetings.
       Until then the real DAG renders 0 edges across all 87 epics.
-- [ ] Commit the scheduled refresh workflow. It is written and sitting
-      **untracked** at `.github/workflows/refresh-dag.yml`, but GitHub rejected
-      the push: the current OAuth token has scopes `gist`, `read:org`, `repo` and
-      lacks `workflow`, so it may not create files under `.github/workflows/`.
-      Fix with `gh auth refresh -s workflow` (interactive), then
-      `git add .github/workflows/refresh-dag.yml && git commit && git push`.
-      It also needs the `SMARTSHEET_ACCESS_TOKEN` repo secret to actually run.
+- [x] ~~Commit the scheduled refresh workflow.~~ Done:
+      `.github/workflows/refresh-dag.yml` is tracked and runs weekdays at 07:00
+      UTC, looping over `python3 tools/teams.py --refreshable`.
+- [ ] Add the `SMARTSHEET_ACCESS_TOKEN` repo secret. This is a Smartsheet
+      **personal API token**, not the Claude Connector — the runner is headless
+      and calls the REST API directly, so the connector cannot stand in for it.
+      Blocked on IT ticket #help00004986, and the account that would mint it is
+      not provisioned yet, so treat this as open-ended.
+      Until it lands the scheduled run **skips the tracker pull and carries on**
+      rather than failing: it emits a `::notice::`, writes a "Tracker pull
+      skipped" job summary, rebuilds from the committed snapshots, and titles any
+      resulting commit *Rebuild dependency DAGs from capability metadata* so
+      `git log` never claims a tracker read that did not happen. Changed
+      2026-08-26 — a red X every weekday is how a scheduled job teaches everyone
+      to ignore it.
 - [x] ~~Reconcile 40 unmapped tracker rows.~~ Done 2026-08-18: the tracker's
       `Initiative` column was renamed to `Capability` and all 87 rows populated
       with capreq slugs. All 87 now map to one of 9 capabilities (CAP-01 through
@@ -131,16 +264,14 @@ for context and excluded from the referencing team's counts.
       python3 tools/build_dependency_dag.py --team electronics --csv path/to/export.csv
       python3 tools/build_index.py
       ```
-      Committing the refreshed `data/tracker-snapshot*.csv` keeps the published
-      site current, since Pages rebuilds on every push.
+      Committing the refreshed `data/<team>/tracker-snapshot.csv` keeps the
+      published site current, since Pages rebuilds on every push.
       Ask IT for: a Smartsheet API access token (Personal Settings > API Access)
       with read on sheets `8066207570677636` and `5660443916849028`.
-- [ ] **GitHub Actions workflow creation.** The current OAuth token has scopes
-      `gist`, `read:org`, `repo` and lacks `workflow`, so
-      `.github/workflows/refresh-dag.yml` cannot be pushed. It is written and
-      sitting untracked. Fix with `gh auth refresh -s workflow`, then commit that
-      one file. Blocked behind the Smartsheet token regardless - the workflow
-      needs `SMARTSHEET_ACCESS_TOKEN` as a repo secret to do anything.
+- [x] ~~**GitHub Actions workflow creation.**~~ Resolved: the `workflow` OAuth
+      scope was granted and `.github/workflows/refresh-dag.yml` is committed and
+      tracked. It still needs `SMARTSHEET_ACCESS_TOKEN` as a repo secret to do
+      anything - see the entry above.
 
 ## Publishing
 
@@ -149,8 +280,7 @@ for context and excluded from the referencing team's counts.
 It does not depend on a workflow. The site is `build_type: legacy`, serving
 `main` at root, which means GitHub rebuilds it itself on every push - it has
 already rebuilt on `dce5b23` and `5226b20` with no Actions involvement. The
-`workflow` scope block does **not** affect publishing; it only blocks automating
-the tracker refresh.
+scheduled refresh workflow is a convenience on top of that, not a dependency.
 
 So DAGs are published as pages today, not only as artifacts. What is manual until
 the Smartsheet token arrives is the *refresh*: export CSV, regenerate, commit,
@@ -176,12 +306,13 @@ push - and the site updates itself from there.
 ## Repo hygiene
 
 - [x] ~~Commit and push.~~ Done 2026-08-18.
-- [x] ~~Add a `CLAUDE.md`.~~ Done 2026-08-18: records the two-team/one-capability
-      model, the hard rules (nothing hand-drawn, never commit raw exports to this
-      public repo), the layout, the full rebuild sequence, and the conventions
-      that are easy to get wrong.
-- [ ] Turn on GitHub Pages: Settings > Pages > source `main`, root. Then add the
-      `SMARTSHEET_ACCESS_TOKEN` secret so the refresh workflow can run.
+- [x] ~~Add a `CLAUDE.md`.~~ Done 2026-08-18, updated 2026-08-26 for the
+      five-team container layout: records the shared-capability model, the hard
+      rules (nothing hand-drawn, never commit raw exports to this public repo),
+      the layout, the full rebuild sequence, and the conventions that are easy to
+      get wrong.
+- [x] ~~Turn on GitHub Pages.~~ Done - the site is live at
+      https://pjm-autonomous.github.io/prak-sysreq-mgmt/.
 - [ ] `data/prak_jira_snapshot-20260818.csv` is gitignored, not pruned. If the
       Jira export should be committed in some form, prune it to the used columns
       first: of its 508 columns only 58 carry data, and three of those are ECR
