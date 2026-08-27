@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
 """The team registry: one definition per tracker, shared by every generator.
 
-Both build_dependency_dag.py (via --team) and build_index.py read this, so a
-sheet id, title, or output path is stated once. Adding a third team means adding
-one entry here and nothing else.
+build_dependency_dag.py, build_index.py and export_snapshot.py all read this, so
+a sheet id, title, or output path is stated once. Adding a team means adding one
+entry here and nothing else - the per-team directories under data/ and
+agile-planning/ are derived from the slug.
+
+Layout each entry implies:
+
+    data/<slug>/tracker-snapshot.csv          committed snapshot (source)
+    agile-planning/<slug>/dependency-dag.*    generated viewer + mermaid source
+    agile-planning/<slug>/standingagenda.*    the team's standing meeting agenda
+
+A team with sheet_id None is registered but not yet onboarded: its container
+exists, WORKFLOW.md steps 12-14 have not run, and there is no snapshot to build
+from. The generators say so plainly rather than failing on a missing file.
 
 Run this module directly to print the registry.
 """
@@ -14,53 +25,159 @@ import os
 _HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(_HERE, ".."))
 
+# Shared across every team - the capability layer is the only thing the trackers
+# have in common, so it does not live in any one team's container.
+SHARED_DIR = "data/shared"
+CAPABILITY_META = f"{SHARED_DIR}/capability-meta.json"
+CAPABILITY_JIRA = f"{SHARED_DIR}/capability-jira.json"
+
+
+def _paths(slug: str, basename: str = "dependency-dag") -> dict:
+    """Every path a team owns, derived from its slug. Nothing per-team is
+    spelled out twice, so a new entry cannot half-adopt the layout."""
+    return {
+        "snapshot": f"data/{slug}/tracker-snapshot.csv",
+        "outdir": f"agile-planning/{slug}",
+        "basename": basename,
+        "agenda": f"agile-planning/{slug}/standingagenda.html",
+    }
+
+
 TEAMS: dict[str, dict] = {
     "embedded": {
+        **_paths("embedded"),
         "name": "Embedded-Core",
         "title": "Embedded-Core Epic Dependency DAG",
         "jira": "VSP-Embedded, project MCHTRNCS",
         "sheet_id": 8066207570677636,
         "sheet_url": ("https://app.smartsheet.com/sheets/"
                       "gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1"),
-        "snapshot": "data/tracker-snapshot.csv",
-        "outdir": "agile-planning/dependency-dag",
-        "agenda": "agile-planning/meeting-agenda/standingagenda-embedded.html",
         "refresh": True,     # has a live tracker the scheduled job can read
     },
     "electronics": {
+        **_paths("electronics"),
         "name": "Electronics",
         "title": "Electronics Epic Dependency DAG",
         "jira": "Electrical Platform, project ET",
         "sheet_id": 5660443916849028,
         "sheet_url": ("https://app.smartsheet.com/sheets/"
                       "JXr3hJVXxXPm6HxWWQQ845G2568xRcG35vJHRJ31"),
-        "snapshot": "data/tracker-snapshot-electronics.csv",
-        "outdir": "agile-planning/dependency-dag-electronics",
-        "agenda": "agile-planning/meeting-agenda/standingagenda-electronics.html",
         "refresh": True,
+    },
+    # --- Registered, container created, not yet onboarded --------------------
+    # No Smartsheet tracker and no PRAK epics in Jira yet. WORKFLOW.md steps
+    # 1-11 decompose the scope, 12-14 stand up the tracker and connect it; fill
+    # in sheet_id / sheet_url and flip refresh to True at that point.
+    "odoa": {
+        **_paths("odoa"),
+        "name": "ODOA",
+        "title": "ODOA Epic Dependency DAG",
+        "jira": "ODOA Platform, project ODOA",
+        "sheet_id": None,
+        "sheet_url": "",
+        "refresh": False,
+    },
+    "gnc": {
+        **_paths("gnc"),
+        "name": "GNC",
+        "title": "GNC Epic Dependency DAG",
+        "jira": "GNC Platform, project GNC",
+        "sheet_id": None,
+        "sheet_url": "",
+        "refresh": False,
+    },
+    "mobius": {
+        **_paths("mobius"),
+        "name": "Mobius",
+        "title": "Mobius Epic Dependency DAG",
+        "jira": "Mobius Platform, project MP",
+        "sheet_id": None,
+        "sheet_url": "",
+        "refresh": False,
     },
 }
 
-ORDER = ["embedded", "electronics"]
+# The illustrative render. Registered so it builds like any other team rather
+# than through a long ad-hoc command line, but kept out of ORDER so it never
+# reaches the landing page, the capability totals, or cross-tracker resolution.
+EXAMPLE = "example"
+TEAMS[EXAMPLE] = {
+    **_paths(EXAMPLE, basename="dependency-dag.example"),
+    "name": "Example",
+    "title": "Example Epic Dependency DAG",
+    "jira": "illustrative only",
+    "sheet_id": None,
+    "sheet_url": "",
+    "refresh": False,
+    "note": ("ILLUSTRATIVE EXAMPLE - the edges below are sample dependencies, "
+             "not real tracker data. Shown to demonstrate how a populated DAG "
+             "renders."),
+}
+
+# Real teams, in landing-page order. The example is deliberately absent.
+ORDER = ["embedded", "electronics", "odoa", "gnc", "mobius"]
+
+# Everything --team accepts, including the example.
+ALL = ORDER + [EXAMPLE]
 
 
 def team(slug: str) -> dict:
     if slug not in TEAMS:
-        raise KeyError(f"unknown team {slug!r}; known: {', '.join(ORDER)}")
+        raise KeyError(f"unknown team {slug!r}; known: {', '.join(ALL)}")
     return TEAMS[slug]
 
 
+def onboarded(cfg: dict) -> bool:
+    """True once the team has a tracker of record to read. Registered-but-not-
+    onboarded teams have a container and a Jira project and nothing else."""
+    return cfg["sheet_id"] is not None
+
+
+def has_snapshot(cfg: dict) -> bool:
+    return os.path.isfile(abspath(cfg["snapshot"]))
+
+
 def others(slug: str) -> list[dict]:
-    """Every other team, for cross-tracker blocker resolution."""
+    """Every other real team, for cross-tracker blocker resolution. The example
+    is excluded in both directions: it never resolves against real trackers and
+    real trackers never resolve against it."""
+    if slug == EXAMPLE:
+        return []
     return [TEAMS[s] for s in ORDER if s != slug]
+
+
+def refreshable() -> list[str]:
+    """Slugs the scheduled job can pull from Smartsheet."""
+    return [s for s in ORDER if TEAMS[s]["refresh"]]
 
 
 def abspath(rel: str) -> str:
     return os.path.normpath(os.path.join(ROOT, rel))
 
 
-if __name__ == "__main__":
-    for slug in ORDER:
+def _cli() -> None:
+    """Print slugs for shell loops, so CI never hardcodes a team list."""
+    import sys
+    flag = sys.argv[1] if len(sys.argv) > 1 else ""
+    if flag == "--refreshable":       # teams the scheduled job can pull
+        print("\n".join(refreshable()))
+    elif flag == "--teams":           # every real team, landing-page order
+        print("\n".join(ORDER))
+    elif flag == "--all":             # real teams plus the example render
+        print("\n".join(ALL))
+    else:
+        _table()
+
+
+def _table() -> None:
+    for slug in ALL:
         cfg = TEAMS[slug]
-        print(f"{slug:12} {cfg['name']:14} sheet={cfg['sheet_id']}  "
+        state = ("onboarded" if onboarded(cfg)
+                 else "example" if slug == EXAMPLE else "not onboarded")
+        sheet = cfg["sheet_id"] if onboarded(cfg) else "-"
+        print(f"{slug:12} {cfg['name']:14} {state:14} sheet={sheet:<18} "
               f"{cfg['snapshot']}")
+
+
+if __name__ == "__main__":
+    _cli()

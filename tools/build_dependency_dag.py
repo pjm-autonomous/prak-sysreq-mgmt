@@ -13,7 +13,7 @@ Data sources (pick one):
   --csv PATH  Read a Grid CSV exported from the sheet
               (File > Export > Export to CSV), for offline runs.
 
-Outputs (written to agile-planning/dependency-dag/ by default):
+Outputs (written to agile-planning/<team>/ by default):
   <basename>.mmd    Mermaid source for the dependency graph
   <basename>.html   Self-contained viewer (open in a browser)
 
@@ -36,9 +36,9 @@ sections:
 is the capability, not the epic. The tracker's Capability column holds a capreq
 slug, which resolves to product/requirements/product/capreq-<slug>.md in the
 prak-v-model checkout (--vmodel) for the PRD id (CAP-nn) and title; the result is
-cached to data/capability-meta.json so a checkout without that repo still renders
-labels. The capability layer is also where the Embedded and Electronics trackers
-meet, so both resolve their groupings against the same capreq files.
+cached to data/shared/capability-meta.json so a checkout without that repo still
+renders labels. The capability layer is where every team's tracker meets, so all
+of them resolve their groupings against the same capreq files.
 
 The .mmd file carries the dependency graph only; the inventory is a flat list
 and a graph is the wrong representation for it.
@@ -95,16 +95,14 @@ EXTERNAL_CAPABILITY = "other tracker"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_VMODEL = os.path.normpath(os.path.join(_HERE, "..", "..", "prak-v-model"))
-DEFAULT_META_CACHE = os.path.normpath(
-    os.path.join(_HERE, "..", "data", "capability-meta.json"))
-DEFAULT_CAP_JIRA = os.path.normpath(
-    os.path.join(_HERE, "..", "data", "capability-jira.json"))
+DEFAULT_META_CACHE = team_registry.abspath(team_registry.CAPABILITY_META)
+DEFAULT_CAP_JIRA = team_registry.abspath(team_registry.CAPABILITY_JIRA)
 DEFAULT_MERMAID_BUNDLE = os.path.normpath(
     os.path.join(_HERE, "..", "vendor", "mermaid.min.js"))
 MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
-DEFAULT_OUTDIR = os.path.normpath(
-    os.path.join(_HERE, "..", "agile-planning", "dependency-dag"))
+DEFAULT_OUTDIR = team_registry.abspath(team_registry.team("embedded")["outdir"])
 DEFAULT_TITLE = "Embedded-Core Epic Dependency DAG"
+DEFAULT_BASENAME = "dependency-dag"
 
 
 # --------------------------------------------------------------------------- #
@@ -134,24 +132,38 @@ def load_capability_meta(vmodel_dir: str, cache_path: str) -> dict:
 
     The tracker's Capability column holds a capreq slug - the capreq filename
     with the leading "capreq-" dropped - so a slug resolves straight to
-    product/requirements/product/capreq-<slug>.md in prak-v-model, which carries
-    the PRD id (CAP-nn) and the human title. The resolved map is cached next to
-    the tracker snapshot so a checkout without that repo still renders labelled
-    tiles. Falls back to bare slugs when neither the repo nor a cache is there.
+    product/requirements/product/capreq-<slug>.md in prak-v-model, whose
+    frontmatter carries everything this repo needs about a capability: the PRD
+    id (CAP-nn), the human title, the MoSCoW priority, and the Jira Initiative
+    key. prak-v-model is the single source of record for all four - nothing
+    about a capability is maintained by hand here.
 
-    This is the layer the Embedded and Electronics trackers share, so both
-    trackers resolve their groupings against the same capreq files.
+    The resolved map is written through to a cache under data/shared/ so a
+    checkout without that repo still renders labelled tiles. The cache is a
+    build product, not an input: never hand-edit it, and treat a run that falls
+    back to it as rendering possibly-stale labels (it says so on stderr).
+
+    This is the layer every team's tracker shares, so all of them resolve
+    their groupings against the same capreq files.
     """
     capreq_dir = os.path.join(vmodel_dir, "product", "requirements", "product")
 
     if not os.path.isdir(capreq_dir):
         try:
             with open(cache_path, encoding="utf-8") as fh:
-                return json.load(fh)
+                cached = json.load(fh)
         except (OSError, ValueError):
             print(f"note: {capreq_dir} not found and no cache at {cache_path}; "
                   "capability tiles will show bare slugs", file=sys.stderr)
             return {}
+        # Say so. Silently rendering from the cache is how a build drifts from
+        # the v-model without anyone noticing: pass --vmodel, or check the
+        # source repo out beside this one, to render from the source of record.
+        print(f"note: {vmodel_dir} not checked out - capability labels and Jira "
+              f"keys come from the cached "
+              f"{os.path.relpath(cache_path, team_registry.ROOT)}, "
+              f"which may be stale.", file=sys.stderr)
+        return cached
 
     meta = {}
     for name in sorted(os.listdir(capreq_dir)):
@@ -159,9 +171,15 @@ def load_capability_meta(vmodel_dir: str, cache_path: str) -> dict:
             continue
         front = _frontmatter(os.path.join(capreq_dir, name))
         slug = name[len("capreq-"):-len(".md")]
-        meta[slug] = {"cap_id": front.get("prd-id", ""),
-                      "title": front.get("title", ""),
-                      "priority": front.get("priority", "")}
+        entry = {"cap_id": front.get("prd-id", ""),
+                 "title": front.get("title", ""),
+                 "priority": front.get("priority", "")}
+        # Only capabilities that have a Jira Initiative carry the key. Omit the
+        # field rather than storing "" so the viewer's "is there a parent issue"
+        # check stays a plain truthiness test.
+        if front.get("jira-key"):
+            entry["jira_key"] = front["jira-key"]
+        meta[slug] = entry
 
     try:
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
@@ -174,25 +192,36 @@ def load_capability_meta(vmodel_dir: str, cache_path: str) -> dict:
 
 
 def merge_capability_jira(meta: dict, path: str) -> dict:
-    """Attach each capability's Jira issue key, from a slug -> key JSON map.
+    """TRANSITIONAL. Fill in Jira Initiative keys the capreq frontmatter lacks.
 
     A capability is a Jira Initiative issue (e.g. MCHTRNCS-259 for CAP-01), and
-    both the Embedded and Electronics epics hang off those same parents - it is
-    the one place the two trackers meet. The capreq files carry no Jira key, so
-    the mapping comes from this small committed file. Refresh it from a Jira CSV
-    export of the PRAK-labelled issues: each Initiative row's Summary is
-    "PLAT3-PRD_Rqmts-####: <capability title>", matched to a capreq by title.
+    every team's epics hang off those same parents - it is the one place the
+    trackers meet. That key now lives in the capreq frontmatter as `jira-key`,
+    alongside prd-id, so prak-v-model is the source of record for it like it
+    already is for the id, title and priority.
+
+    This file is what the mapping was before that: a hand-maintained JSON map.
+    It is kept only so a checkout predating the frontmatter change still renders
+    Jira links. **Frontmatter wins** - this only fills slugs that came back
+    without a key. Delete the file and this function once every capreq carries
+    `jira-key`; the note below tells you when a slug is still relying on it.
     """
     try:
         with open(path, encoding="utf-8") as fh:
             cap_jira = json.load(fh)
     except (OSError, ValueError):
         return meta
+    filled = []
     for slug, key in cap_jira.items():
-        if slug in meta:
-            meta[slug]["jira_key"] = key
-        else:
+        if slug not in meta:
             print(f"note: {path} lists unknown capability {slug!r}", file=sys.stderr)
+        elif not meta[slug].get("jira_key"):
+            meta[slug]["jira_key"] = key
+            filled.append(slug)
+    if filled:
+        print(f"note: {len(filled)} capability Jira key(s) came from the legacy "
+              f"{os.path.basename(path)} rather than capreq frontmatter: "
+              + ", ".join(sorted(filled)), file=sys.stderr)
     return meta
 
 
@@ -1261,11 +1290,11 @@ def build_html(records: list[dict], components: list[list[str]],
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--team", choices=team_registry.ORDER,
+    ap.add_argument("--team", choices=team_registry.ALL,
                     help="preset from tools/teams.py: fills the sheet id, sheet "
-                         "url, title, outdir, offline snapshot, and the other "
-                         "teams' snapshots for cross-tracker blockers. Any "
-                         "explicit flag wins over the preset.")
+                         "url, title, outdir, basename, note, offline snapshot, "
+                         "and the other teams' snapshots for cross-tracker "
+                         "blockers. Any explicit flag wins over the preset.")
     src = ap.add_mutually_exclusive_group(required=False)
     src.add_argument("--live", action="store_true", help="pull via Smartsheet API")
     src.add_argument("--csv", metavar="PATH", help="read a Grid CSV export")
@@ -1277,8 +1306,9 @@ def main() -> None:
     ap.add_argument("--title", default=DEFAULT_TITLE,
                     help="page title and heading (default: %(default)s)")
     ap.add_argument("--outdir", default=DEFAULT_OUTDIR)
-    ap.add_argument("--basename", default="dependency-dag",
-                    help="output file stem (default: dependency-dag)")
+    ap.add_argument("--basename", default=DEFAULT_BASENAME,
+                    help="output file stem (default: %(default)s; --team's "
+                         "registry entry can override it)")
     ap.add_argument("--note", default="",
                     help="caption shown under the header, e.g. an EXAMPLE disclaimer")
     ap.add_argument("--timestamp", default="", help="override generated-at stamp")
@@ -1296,8 +1326,9 @@ def main() -> None:
     ap.add_argument("--mermaid-bundle", default=DEFAULT_MERMAID_BUNDLE,
                     help="path to the mermaid UMD bundle (default: %(default)s)")
     ap.add_argument("--capability-jira", default=DEFAULT_CAP_JIRA,
-                    help="JSON map of capability slug -> Jira Initiative key, "
-                         "used to link each capability to its shared parent issue")
+                    help="TRANSITIONAL fallback: JSON map of capability slug -> "
+                         "Jira Initiative key, used only for capreq files that "
+                         "do not yet carry `jira-key` in their frontmatter")
     ap.add_argument("--meta-cache", default=DEFAULT_META_CACHE,
                     help="where the resolved capability titles are cached so runs "
                          "without --vmodel still render labels")
@@ -1310,7 +1341,15 @@ def main() -> None:
             cfg = team_registry.team(args.team)
         except KeyError as exc:
             ap.error(str(exc))
-        if args.sheet_id == DEFAULT_SHEET_ID:
+        # A registered-but-not-onboarded team has a container and nothing to
+        # read. That is a normal state, not a failure: say so and stop, so a
+        # loop over every team does not abort on the teams still queued up.
+        if not args.live and args.csv is None and not team_registry.has_snapshot(cfg):
+            print(f"{cfg['name']}: no tracker snapshot yet "
+                  f"({cfg['snapshot']}). Onboard the team first - "
+                  f"WORKFLOW.md steps 12-14 - then re-run.")
+            return
+        if args.sheet_id == DEFAULT_SHEET_ID and cfg["sheet_id"] is not None:
             args.sheet_id = cfg["sheet_id"]
         if args.sheet_url == SHEET_URL:
             args.sheet_url = cfg["sheet_url"]
@@ -1318,6 +1357,10 @@ def main() -> None:
             args.title = cfg["title"]
         if args.outdir == DEFAULT_OUTDIR:
             args.outdir = team_registry.abspath(cfg["outdir"])
+        if args.basename == DEFAULT_BASENAME:
+            args.basename = cfg["basename"]
+        if not args.note:
+            args.note = cfg.get("note", "")
         if args.csv is None and not args.live:
             args.csv = team_registry.abspath(cfg["snapshot"])
         if not args.cross_reference:
