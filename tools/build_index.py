@@ -43,12 +43,15 @@ REPO_BLOB = "https://github.com/pjm-autonomous/prak-sysreq-mgmt/blob/main/"
 TEAMS = [
     {
         **cfg,
-        "dag": f"{cfg['outdir']}/dependency-dag.html",
-        "mmd": f"{cfg['outdir']}/dependency-dag.mmd",
+        "slug": slug,
+        "dag": f"{cfg['outdir']}/{cfg['basename']}.html",
+        "mmd": f"{cfg['outdir']}/{cfg['basename']}.mmd",
         "tracker": cfg["sheet_url"],
     }
-    for cfg in (team_registry.team(slug) for slug in team_registry.ORDER)
+    for slug, cfg in ((s, team_registry.team(s)) for s in team_registry.ORDER)
 ]
+EXAMPLE = team_registry.team(team_registry.EXAMPLE)
+EXAMPLE_DAG = f"{EXAMPLE['outdir']}/{EXAMPLE['basename']}.html"
 
 
 def esc(s: str) -> str:
@@ -120,6 +123,24 @@ def team_card(team: dict, rows: list[dict]) -> str:
   </section>'''
 
 
+def pending_card(team: dict) -> str:
+    """A team that is registered and has a container but no tracker yet.
+
+    Rendering it as a real card with zeroes would claim 0% progress against a
+    denominator nobody has established. The card states the actual position:
+    the scope is queued, and which workflow steps produce the missing pieces.
+    """
+    return f'''  <section class="team pending">
+    <h3>{esc(team["name"])} <span class="chip">not yet onboarded</span></h3>
+    <p class="muted">{esc(team["jira"])} &middot; no tracker of record yet</p>
+    <p class="muted">Container reserved at <code>{esc(team["outdir"])}/</code> and
+    <code>{esc(team["snapshot"])}</code>. The scope has to be decomposed and imported
+    (<a href="__BLOB__WORKFLOW.md">WORKFLOW.md</a> steps 1&ndash;11), then its
+    Smartsheet tracker stood up and connected (steps 12&ndash;14), before a DAG and
+    progress numbers exist.</p>
+  </section>'''
+
+
 def capability_rows(per_team: list[collections.Counter], meta: dict,
                     cap_jira: dict) -> str:
     slugs = sorted(set().union(*per_team) if per_team else set(),
@@ -167,6 +188,12 @@ TEMPLATE = """<!doctype html>
   .teams { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
   .team { border: 1px solid var(--line); border-radius: 10px; padding: .9rem 1rem 1rem;
           background: var(--panel); }
+  .team.pending { border-style: dashed; background: transparent; }
+  .team.pending h3 { color: var(--muted); }
+  .chip { display: inline-block; vertical-align: middle; background: var(--chip);
+          color: var(--muted); border-radius: 999px; padding: .1rem .5rem;
+          font-size: .7rem; font-weight: 600; text-transform: uppercase;
+          letter-spacing: .04em; }
   .progress { margin: .7rem 0 .8rem; display: grid; gap: .3rem; }
   .progress div { display: flex; justify-content: space-between; gap: 1rem;
                   border-bottom: 1px dotted var(--line); padding-bottom: .2rem; }
@@ -191,8 +218,8 @@ TEMPLATE = """<!doctype html>
 <header>
   <h1>PRAK System Requirements &mdash; Epic Decomposition</h1>
   <p class="muted">Dependency DAGs and decomposition progress for the PRAK epics,
-  generated from the trackers of record. Two teams, tracked separately, sharing
-  the same PRD Capability Requirements.</p>
+  generated from the trackers of record. __N_TEAMS__ teams, tracked separately,
+  sharing the same PRD Capability Requirements.</p>
 </header>
 
 <h2>Teams</h2>
@@ -207,8 +234,8 @@ __CARDS__
 __PROGRESS_NOTE__
 
 <h2>Shared PRD capabilities</h2>
-<p class="muted">Both teams' epics hang off these Jira Initiative issues. This is
-the only layer the two trackers share &mdash; no epic appears in both.</p>
+<p class="muted">Every team's epics hang off these Jira Initiative issues. This is
+the only layer the trackers share &mdash; no epic appears in two of them.</p>
 <div class="wrap">
 <table>
   <thead><tr><th>PRD id</th><th>Capability</th>__TEAM_HEADS__<th>Jira parent</th></tr></thead>
@@ -228,7 +255,7 @@ See <a href="__BLOB__README.md">README.md</a> for the commands,
 and <a href="__BLOB__TODO.md">TODO.md</a> for what is still open.</p>
 
 <footer>
-  Updated __UPDATED__ &middot; counted from <code>data/tracker-snapshot*.csv</code>.
+  Updated __UPDATED__ &middot; counted from <code>data/&lt;team&gt;/tracker-snapshot.csv</code>.
   Rebuild this page with <code>python3 tools/build_index.py</code>.
 </footer>
 </body></html>
@@ -236,9 +263,9 @@ and <a href="__BLOB__TODO.md">TODO.md</a> for what is still open.</p>
 
 ZERO_NOTE = """<div class="note">
   <b>Progress is genuinely at zero.</b> Epics are evaluated and dependencies
-  recorded during the standing meetings; until those happen, both DAGs render
-  every epic as unblocked. The Embedded example render
-  (<a href="agile-planning/dependency-dag/dependency-dag.example.html">dependency-dag.example.html</a>)
+  recorded during the standing meetings; until those happen, every DAG renders
+  each epic as unblocked. The example render
+  (<a href="__EXAMPLE_DAG__">__EXAMPLE_NAME__</a>)
   shows how a populated DAG looks, using sample edges rather than real ones.
 </div>"""
 
@@ -252,15 +279,25 @@ def main() -> None:
     args = ap.parse_args()
     updated = args.timestamp or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    meta = load_json(os.path.join(ROOT, "data", "capability-meta.json"))
-    cap_jira = load_json(os.path.join(ROOT, "data", "capability-jira.json"))
+    meta = load_json(team_registry.abspath(team_registry.CAPABILITY_META))
+    cap_jira = load_json(team_registry.abspath(team_registry.CAPABILITY_JIRA))
 
-    cards, per_team, totals, names = [], [], [], []
+    cards, per_team, totals, names, pending = [], [], [], [], []
     any_progress = False
     for team in TEAMS:
         path = os.path.join(ROOT, team["snapshot"])
         if not os.path.isfile(path):
-            print(f"note: {path} missing, skipping {team['name']}")
+            # Registered without a tracker is the expected state for a team
+            # still queued for decomposition - render the container, not a
+            # fabricated 0/0. A missing snapshot for an onboarded team is a
+            # real problem, so that one is called out as an error.
+            if team_registry.onboarded(team):
+                raise SystemExit(
+                    f"ERROR: {team['name']} is onboarded (sheet "
+                    f"{team['sheet_id']}) but {team['snapshot']} is missing. "
+                    f"Run: python3 tools/export_snapshot.py --team {team['slug']}")
+            cards.append(pending_card(team))
+            pending.append(team["name"])
             continue
         rows = load_rows(path)
         cards.append(team_card(team, rows))
@@ -270,7 +307,7 @@ def main() -> None:
         names.append(team["name"])
         any_progress = any_progress or evaluated(rows) or with_dependencies(rows)
 
-    if not cards:
+    if not names:
         raise SystemExit("ERROR: no tracker snapshots found - nothing to render.")
     all_rows = sum(totals)
 
@@ -282,6 +319,9 @@ def main() -> None:
            .replace("__TEAM_TOTALS__",
                     "".join(f'<th class="num">{t}</th>' for t in totals))
            .replace("__CAP_ROWS__", capability_rows(per_team, meta, cap_jira))
+           .replace("__EXAMPLE_DAG__", esc(EXAMPLE_DAG))
+           .replace("__EXAMPLE_NAME__", esc(os.path.basename(EXAMPLE_DAG)))
+           .replace("__N_TEAMS__", str(len(TEAMS)))
            .replace("__BLOB__", REPO_BLOB)
            .replace("__UPDATED__", esc(updated)))
 
@@ -290,6 +330,9 @@ def main() -> None:
     print(f"wrote {args.out}")
     print(f"  {' + '.join(f'{t} {n}' for t, n in zip(names, totals))} "
           f"= {all_rows} epics")
+    if pending:
+        print(f"  {len(pending)} team(s) registered but not yet onboarded: "
+              + ", ".join(pending))
 
 
 if __name__ == "__main__":

@@ -6,6 +6,11 @@ The end-to-end SE process this repo sits in is documented in
 [WORKFLOW.md](WORKFLOW.md), with reusable prompts in
 [prompts/kickoff.md](prompts/kickoff.md).
 
+**Contributing?** Only the repo owner has write access. Which route to use —
+edit your Smartsheet tracker, or fork and open a PR — depends on what you are
+changing: see [Who changes what](WORKFLOW.md#who-changes-what-access-model).
+Do not hand-edit a tracker snapshot; the scheduled refresh overwrites it.
+
 ## Embedded-Core Epic Dependency DAG
 
 A dependency graph of the 87 Embedded-Core (VSP-Embedded) PRAK epics, generated
@@ -15,18 +20,19 @@ reflects current sheet state.
 
 - **Tracker (source of truth):** [Embedded-Core Epic Decomposition Tracker](https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1)
 - **Generator:** [`tools/build_dependency_dag.py`](tools/build_dependency_dag.py)
+- **Artifacts:** [`agile-planning/embedded/`](agile-planning/embedded/)
 
 ### Files
 
 | File | What it is |
 | ------ | ------------ |
-| `dependency-dag.mmd` | Mermaid source, current sheet state (paste into Jama / GitHub / [mermaid.live](https://mermaid.live)) |
-| `dependency-dag.html` | Viewer — open in a browser. Loads mermaid from `vendor/`, so no network needed |
-| `dependency-dag.example.*` | **Illustrative** render with sample edges, to show how a populated DAG looks (not real dependencies) |
+| [`agile-planning/embedded/dependency-dag.mmd`](agile-planning/embedded/dependency-dag.mmd) | Mermaid source, current sheet state (paste into Jama / GitHub / [mermaid.live](https://mermaid.live)) |
+| [`agile-planning/embedded/dependency-dag.html`](agile-planning/embedded/dependency-dag.html) | Viewer — open in a browser. Loads mermaid from `vendor/`, so no network needed |
+| [`agile-planning/example/dependency-dag.example.*`](agile-planning/example/) | **Illustrative** render with sample edges, to show how a fully populated DAG looks (not real dependencies) |
 
-> The current `dependency-dag.*` has **0 edges** until the evaluation meetings
-> fill in the tracker's **Blocking Epics** column. The `.example.*` files show
-> the intended result.
+> Most rows still have an empty **Blocking Epics** column, so the real DAG is
+> mostly unblocked epics until the evaluation meetings fill it in. The
+> `.example.*` files show the intended end state.
 
 ### Reading the viewer
 
@@ -49,8 +55,14 @@ The tracker's **Capability** column holds a capreq slug, so each value resolves
 straight to `product/requirements/product/capreq-<slug>.md` in the `prak-v-model`
 checkout named by `--vmodel` (default `../prak-v-model`), which supplies the
 `CAP-nn` id and the title. The resolved map is cached to
-`data/capability-meta.json`, so a checkout without that repo still renders labels
-instead of bare slugs.
+`data/shared/capability-meta.json`, so a checkout without that repo still renders labels
+instead of bare slugs — and says on stderr that it did.
+
+That frontmatter is also where each capability's **Jira Initiative key** comes
+from (`jira-key: MCHTRNCS-259`), so `prak-v-model` is the single source of record
+for a capability's id, title, priority, and Jira identity. Nothing about a
+capability is hand-maintained in this repo; `capability-meta.json` is a
+write-through cache, not an input.
 
 All 87 epics are mapped to one of 9 capabilities; there is no unassigned group.
 
@@ -97,7 +109,7 @@ live Smartsheet tracker so it re-populates whenever the sheet changes.
 
 - **Tracker (source of truth):** [Electronics Epic Decomposition Tracker](https://app.smartsheet.com/sheets/JXr3hJVXxXPm6HxWWQQ845G2568xRcG35vJHRJ31)
 - **Generator:** `tools/build_dependency_dag.py --team electronics`
-- **Artifacts:** [`agile-planning/dependency-dag-electronics/`](agile-planning/dependency-dag-electronics/)
+- **Artifacts:** [`agile-planning/electronics/`](agile-planning/electronics/)
 
 ### Source
 
@@ -168,23 +180,44 @@ python3 tools/build_dependency_dag.py --team electronics --live
 
 ## Teams and presets
 
-Both trackers are registered in [`tools/teams.py`](tools/teams.py), so a sheet id,
-URL, title, or output path is stated exactly once and every generator reads the
-same entry. Adding a third team means adding one entry there.
+Every team is registered in [`tools/teams.py`](tools/teams.py), so a sheet id,
+URL, title, or path is stated exactly once and every generator reads the same
+entry. Each team owns a container, and both paths are derived from its slug:
+
+```
+data/<slug>/tracker-snapshot.csv        source - refreshed from the sheet
+agile-planning/<slug>/dependency-dag.*  generated viewer + mermaid source
+agile-planning/<slug>/standingagenda.*  that team's standing meeting agenda
+```
 
 | Team | Preset | Sheet id | Jira |
 | ------ | -------- | ---------- | ------ |
 | Embedded-Core | `--team embedded` | `8066207570677636` | project `MCHTRNCS`, VSP-Embedded |
 | Electronics | `--team electronics` | `5660443916849028` | project `ET`, Electrical Platform |
+| ODOA | `--team odoa` | — not onboarded | project `ODOA`, ODOA Platform |
+| GNC | `--team gnc` | — not onboarded | project `GNC`, GNC Platform |
+| Mobius | `--team mobius` | — not onboarded | project `MP`, Mobius Platform |
+| _(example render)_ | `--team example` | — | illustrative only |
+
+A team with no sheet id is **registered but not onboarded**: its container and
+Jira project exist, but the decomposition and the tracker do not. The generators
+print a note and skip it, so a loop over every team keeps going. Onboarding one
+means setting `sheet_id`, `sheet_url`, and `refresh: True` in that entry — no
+other file changes.
 
 `--team` is a preset, not a mode: it fills the sheet id, sheet URL, page title,
-output directory, offline snapshot, and the *other* teams' snapshots for
-cross-tracker blocker labels. Any flag you pass explicitly wins over the preset.
+output directory, output basename, note, offline snapshot, and the *other* teams'
+snapshots for cross-tracker blocker labels. Any flag you pass explicitly wins
+over the preset.
 
 ```bash
 python3 tools/build_dependency_dag.py --team electronics          # offline, from the snapshot
 python3 tools/build_dependency_dag.py --team electronics --live    # from the sheet
 python3 tools/export_snapshot.py --team electronics                # refresh the snapshot
+
+python3 tools/teams.py                 # print the registry
+python3 tools/teams.py --refreshable   # slugs the scheduled job pulls
+python3 tools/teams.py --all           # every slug, example included
 ```
 
 ## Published site
@@ -246,13 +279,16 @@ message if it is missing.
 
 ## Meeting agendas
 
-One standing agenda per team, in
-[`agile-planning/meeting-agenda/`](agile-planning/meeting-agenda/):
+One standing agenda per team, inside that team's container as
+`agile-planning/<slug>/standingagenda.*`:
 
 | File | Meeting |
 | ------ | --------- |
-| `standingagenda-embedded.*` | Embedded-Core, 87 epics, ~10 per session |
-| `standingagenda-electronics.*` | Electronics, 15 epics, ~8 per session, roles still TBD |
+| [`agile-planning/embedded/standingagenda.*`](agile-planning/embedded/) | Embedded-Core, 87 epics, ~10 per session |
+| [`agile-planning/electronics/standingagenda.*`](agile-planning/electronics/) | Electronics, 15 epics, ~8 per session, roles still TBD |
+
+ODOA, GNC, and Mobius have containers but no agenda yet — they have not been
+onboarded.
 
 ## Open work
 

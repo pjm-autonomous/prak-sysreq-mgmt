@@ -39,26 +39,37 @@ release loop is manual but small:
 #    Embedded  -> sheet 8066207570677636
 #    Electronics -> sheet 5660443916849028
 
-# 2. Rebuild that team's snapshot + DAG from the export. This overwrites the
-#    committed data/tracker-snapshot*.csv with only the 7 generator columns,
-#    so no raw export (account ids, labor rates) ever reaches the public repo.
-python3 tools/build_dependency_dag.py --team electronics --csv ~/Downloads/export.csv
+# 2. Prune the export into that team's snapshot. This overwrites the committed
+#    data/<team>/tracker-snapshot.csv with only the 7 generator columns, sorted
+#    by epic id, so no raw export (account ids, labor rates) ever reaches the
+#    public repo — and so an offline refresh produces the same bytes the live
+#    one would. Do NOT skip this and point the generator at the raw export:
+#    the DAG would render, but the snapshot would stay stale and the landing
+#    page would keep reporting the previous numbers.
+python3 tools/export_snapshot.py --team electronics --from-csv ~/Downloads/export.csv
 
-# 3. Rebuild the landing page LAST — it counts from the snapshots.
+# 3. Rebuild the DAG from the snapshot just written.
+python3 tools/build_dependency_dag.py --team electronics
+
+# 4. Rebuild the landing page LAST — it counts from the snapshots.
 python3 tools/build_index.py
 
-# 4. Commit the regenerated products and push. Pages redeploys from here.
+# 5. Commit the regenerated products and push. Pages redeploys from here.
 git add data/ agile-planning/ index.html
 git commit -m "Refresh Electronics DAG from tracker export"
 git push -u origin <branch>
 ```
 
-Once the API token exists, steps 1–2 collapse into
-`python3 tools/export_snapshot.py --team <x>` +
-`python3 tools/build_dependency_dag.py --team <x>`, and
-`.github/workflows/refresh-dag.yml` can run the whole thing on a schedule (it
-needs the `SMARTSHEET_ACCESS_TOKEN` repo secret and the `workflow` scope to be
-committed — both still open in TODO.md).
+Once the API token exists, steps 1–2 collapse into a single
+`python3 tools/export_snapshot.py --team <x>` — same command, `--live` instead of
+`--from-csv` — and steps 3–4 are unchanged.
+`.github/workflows/refresh-dag.yml` is committed and already runs the whole
+thing weekdays at 07:00 UTC. Without the `SMARTSHEET_ACCESS_TOKEN` repo secret it
+skips only the tracker pull — it still rebuilds from the committed snapshots,
+posts a "Tracker pull skipped" job summary, and marks any commit as a capability
+rebuild rather than a tracker refresh. That secret is a Smartsheet **personal API
+token**, not the Claude Connector: the runner is headless and calls the REST API
+directly. Still open in TODO.md.
 
 > **Never hand-edit `index.html` or anything under `agile-planning/*/`.** They are
 > build products and the next regenerate overwrites them. Fix the tracker or the

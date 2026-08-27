@@ -26,38 +26,114 @@ jobs:
         with:
           python-version: "3.12"      # generators are stdlib only, no install step
 
-      - name: Check the token is configured
+      - name: Is the Smartsheet token configured?
+        id: smartsheet
         env:
           SMARTSHEET_ACCESS_TOKEN: ${{ secrets.SMARTSHEET_ACCESS_TOKEN }}
+        # A missing token is a known, expected state - the account that would
+        # mint it is not provisioned yet - so it is a notice, not a failure. A
+        # red X every weekday morning is how a scheduled job trains everyone to
+        # ignore it, and then a real failure goes unread too.
+        #
+        # The rest of the job still runs. Capability ids, titles, priorities and
+        # Jira keys come from prak-v-model, not from Smartsheet, so a rebuild can
+        # legitimately change the published pages even when no tracker was
+        # re-read. Only the snapshot pull is skipped.
         run: |
-          if [ -z "$SMARTSHEET_ACCESS_TOKEN" ]; then
-            echo "::error::SMARTSHEET_ACCESS_TOKEN is not set. Add it under" \
-                 "Settings > Secrets and variables > Actions."
-            exit 1
+          if [ -n "$SMARTSHEET_ACCESS_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SMARTSHEET_ACCESS_TOKEN is not set - skipping the tracker pull and rebuilding from the committed snapshots. Add it under Settings > Secrets and variables > Actions to enable the live refresh."
+            {
+              echo "### Tracker pull skipped"
+              echo
+              echo "\`SMARTSHEET_ACCESS_TOKEN\` is not configured, so the committed"
+              echo "snapshots under \`data/<team>/\` were used as-is. Progress numbers"
+              echo "on the landing page reflect the last manual refresh, not the live"
+              echo "sheets. Everything else in this run is current."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check out prak-v-model for capability metadata
+        # Capability ids (CAP-nn), titles, MoSCoW priorities and Jira Initiative
+        # keys all come from capreq-*.md frontmatter in asirobots/prak-v-model -
+        # that repo is the source of record, nothing about a capability is
+        # maintained by hand here. It is INTERNAL and this repo is public, so
+        # the checkout needs a credential.
+        #
+        # Credential history, so this is not relitigated: a read-only deploy key
+        # would be tighter - scoped to one repo by construction rather than by
+        # configuration - but asirobots disables deploy keys by org/enterprise
+        # policy (HTTP 422 "Deploy keys are disabled for this repository",
+        # checked 2026-08-26).
+        #
+        # VMODEL_READ_TOKEN currently holds a SHARED fine-grained PAT that also
+        # serves other tooling and carries read well beyond this repo's contents.
+        # Two consequences worth knowing: its blast radius is wider than this job
+        # needs, and rotating it elsewhere silently degrades this job - which is
+        # what the check step below exists to surface. Narrowing it to a
+        # dedicated Contents:Read token is tracked in TODO.md.
+        #
+        # continue-on-error, not a hard failure: without the secret the
+        # generators fall back to the committed cache in data/shared/ and say so
+        # on stderr. A refresh with slightly stale capability labels beats no
+        # refresh at all, and the tracker data - which is what this job exists
+        # to pull - is unaffected either way.
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: asirobots/prak-v-model
+          ref: main
+          token: ${{ secrets.VMODEL_READ_TOKEN }}
+          path: .vmodel
+
+      - name: Did the capability source land?
+        # The checkout above is continue-on-error, so a revoked, rotated or
+        # expired credential drops this job to cached capability labels with
+        # nothing going red. The generators do say so on stderr, but nobody
+        # reads the logs of a green run - put it where it will be seen.
+        run: |
+          if [ -d "$GITHUB_WORKSPACE/.vmodel/product/requirements/product" ]; then
+            echo "capability source checked out at .vmodel"
+          else
+            echo "::notice::prak-v-model was not checked out - capability labels and Jira keys come from the committed cache in data/shared/ and may be stale. Check VMODEL_READ_TOKEN: missing, expired, rotated, or lacking Contents:Read on asirobots/prak-v-model."
+            {
+              echo "### Capability source unavailable"
+              echo
+              echo "\`asirobots/prak-v-model\` was not checked out, so capability ids,"
+              echo "titles, priorities and Jira keys came from the committed cache in"
+              echo "\`data/shared/capability-meta.json\` and may be stale."
+              echo
+              echo "Check \`VMODEL_READ_TOKEN\` - missing, expired, rotated by the other"
+              echo "tooling that shares it, or lacking Contents:Read on the repo."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Refresh snapshots from the live trackers
+        if: steps.smartsheet.outputs.available == 'true'
         env:
           SMARTSHEET_ACCESS_TOKEN: ${{ secrets.SMARTSHEET_ACCESS_TOKEN }}
         # Snapshots first: build_index.py counts progress from them, not from the
         # sheets, so a stale snapshot would report 0% no matter what the DAG shows.
+        # The team list comes from tools/teams.py, so onboarding a team needs no
+        # edit here: only teams with refresh: True are pulled.
         run: |
-          python3 tools/export_snapshot.py --team embedded
-          python3 tools/export_snapshot.py --team electronics
+          for t in $(python3 tools/teams.py --refreshable); do
+            python3 tools/export_snapshot.py --team "$t"
+          done
 
-      - name: Rebuild both DAGs
-        # Offline from the snapshots just refreshed, so the DAG and the progress
-        # numbers are guaranteed to describe the same read of each sheet.
+      - name: Rebuild every DAG, plus the example render
+        # Offline from the committed snapshots - the ones just refreshed above if
+        # the token was set, otherwise the ones already in the tree - so each DAG
+        # and the progress numbers always describe the same read of that sheet.
+        # Teams registered but not yet onboarded have no snapshot: they print a
+        # note and are skipped.
         run: |
-          python3 tools/build_dependency_dag.py --team embedded
-          python3 tools/build_dependency_dag.py --team electronics
-
-      - name: Rebuild the example render
-        run: |
-          python3 tools/build_dependency_dag.py \
-            --csv data/tracker-snapshot.example.csv \
-            --basename dependency-dag.example \
-            --note "ILLUSTRATIVE EXAMPLE - the edges below are sample dependencies, not real tracker data. Shown to demonstrate how a populated DAG renders."
+          for t in $(python3 tools/teams.py --all); do
+            python3 tools/build_dependency_dag.py --team "$t" \
+              --vmodel "$GITHUB_WORKSPACE/.vmodel"
+          done
 
       - name: Rebuild the landing page
         run: python3 tools/build_index.py
@@ -85,7 +161,16 @@ jobs:
             exit 0
           fi
           git add agile-planning data index.html
-          git commit -m "Refresh dependency DAGs from the Smartsheet trackers
-
-          Generated by .github/workflows/refresh-dag.yml."
+          if [ "${{ steps.smartsheet.outputs.available }}" = "true" ]; then
+            subject="Refresh dependency DAGs from the Smartsheet trackers"
+            source="Trackers re-read over the Smartsheet API."
+          else
+            # Say so plainly: on these runs the only thing that can have moved is
+            # the capability layer from prak-v-model. Reading this in git log
+            # later, "from the trackers" would be a lie about provenance.
+            subject="Rebuild dependency DAGs from capability metadata"
+            source="SMARTSHEET_ACCESS_TOKEN not set - trackers were not re-read; the committed snapshots were used as-is."
+          fi
+          git commit -m "$subject" -m "$source" \
+                     -m "Generated by .github/workflows/refresh-dag.yml."
           git push
