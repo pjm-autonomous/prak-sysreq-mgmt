@@ -2,6 +2,10 @@
 
 PRAK System Requirements (Jira Epics) decomposed.
 
+The end-to-end SE process this repo sits in is documented in
+[WORKFLOW.md](WORKFLOW.md), with reusable prompts in
+[prompts/kickoff.md](prompts/kickoff.md).
+
 ## Embedded-Core Epic Dependency DAG
 
 A dependency graph of the 87 Embedded-Core (VSP-Embedded) PRAK epics, generated
