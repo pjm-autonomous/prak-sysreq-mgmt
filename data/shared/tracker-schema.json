@@ -1,0 +1,79 @@
+{
+  "_comment": [
+    "The contract a decomposition tracker must satisfy. Authored by hand - this",
+    "is the one file under data/shared/ that is an input, not a build product.",
+    "",
+    "It exists because a Smartsheet account reconfiguration on 2026-08-27",
+    "stripped every dropdown and formula from both trackers, and nothing in the",
+    "repo said what they should have been. Restoring them meant diffing two",
+    "sheets and guessing at intent. With this file, tools/validate_tracker.py",
+    "reports the drift and a future restore is mechanical.",
+    "",
+    "'required' columns are the ones the generators read - a tracker missing one",
+    "cannot be built from. 'optional' columns are read when present and tolerated",
+    "when absent. Everything else on the sheet is meeting scratch space that this",
+    "repo neither reads nor commits."
+  ],
+  "aliases": {
+    "Blocking Epics": "Blocking Issues"
+  },
+  "required": {
+    "Epic": {
+      "type": "TEXT_NUMBER",
+      "unique": true,
+      "pattern": "^epic-[a-z0-9-]+$",
+      "note": "Stable slug, the id every dependency resolves against."
+    },
+    "Jira Key": {
+      "type": "TEXT_NUMBER",
+      "unique": true,
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+      "hyperlink": "https://asirobots.atlassian.net/browse/",
+      "note": "Electronics epics are project ET, not MCHTRNCS."
+    },
+    "Title": {"type": "TEXT_NUMBER"},
+    "Capability": {
+      "type": "TEXT_NUMBER",
+      "resolves_to": "prak-v-model capreq-<slug>.md",
+      "note": "capreq filename with 'capreq-' dropped. Renamed from 'Initiative' on 2026-08-18."
+    },
+    "Baseline Priority": {
+      "type": "PICKLIST",
+      "options": ["Must Have", "Should Have", "Could Have", "Will Not Have"],
+      "note": "MoSCoW, pre-filled from the epic. Not edited in meetings."
+    },
+    "2TS Required": {
+      "type": "PICKLIST",
+      "options": ["TBD", "Yes", "No"]
+    },
+    "Blocking Issues": {
+      "type": "TEXT_NUMBER",
+      "note": [
+        "Direction is blocker -> dependent. An entry may carry a comma-separated",
+        "qualifier list and a marker: 'epic-x (Embedded, soft) [guess]'.",
+        "(hard) cannot start, (soft) cannot finish, untagged defaults to hard.",
+        "Never split this cell on commas naively. Stories can gate an epic too,",
+        "which is why it is Issues rather than Epics."
+      ]
+    }
+  },
+  "optional": {
+    "Eval Status": {
+      "type": "PICKLIST",
+      "options": ["Not Started", "Estimated", "Needs Info"],
+      "note": "Display only - drives the estimated indicator, never an edge or a count."
+    },
+    "Confidence": {
+      "type": "PICKLIST",
+      "options": ["Low", "Medium", "High"]
+    }
+  },
+  "formulas": {
+    "prak-embedded-core-epics": {
+      "Epic Total (days)": "=([Time per Story (points)]@row * [Story Count]@row) * 2"
+    },
+    "prak-electronics-epics": {
+      "Epic Total (days)": "=2 * (([Mech Stories]@row * [Mech Days/Story]@row) + ([Elec Stories]@row * [Elec Days/Story]@row))"
+    }
+  }
+}

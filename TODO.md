@@ -58,6 +58,38 @@ export is in tracker row order, so pointing the generator straight at an export
 reorders the whole epic-data block in the viewer. Routing both through
 `export_snapshot.py` is what keeps the committed HTML from churning.
 
+## Workflow simplification - explored 2026-08-28
+
+Built: the tracker validator + schema, the comment-triggered refresh, the
+cross-team dependency table, the change digest, and CREDENTIALS.md.
+
+Deferred, in rough value order:
+
+- [ ] **`tools/onboard_team.py --slug gnc --sheet-id N`.** Turns WORKFLOW.md
+      steps 12-14 from prose into one command: validate the sheet against
+      `tracker-schema.json`, write the registry entry, pull the first snapshot,
+      build. Worth doing before ODOA/GNC/Mobius onboard, so all three get the
+      same treatment rather than three hand-runs.
+- [ ] **A Smartsheet tracker template.** Decided 2026-08-28 to keep this in the
+      Smartsheet workspace rather than the repo - a template is a Smartsheet
+      object, and `tracker-schema.json` already carries the contract the repo
+      needs. Build it from `prak-embedded-core-epics` once its columns are
+      settled, so a new team starts schema-correct instead of needing the
+      restoration exercise of 2026-08-27. Confirm whether the API can create a
+      sheet from it, which would let `onboard_team.py` do the whole job.
+- [ ] **"What do I do next?" on the landing page.** The site reports state
+      (28 of 87 evaluated); an SE opening it wants the actionable inverse -
+      which epics still need a 2TS decision, which have no capability, which are
+      blocked on something unresolved. Same data, different framing.
+- [ ] **Constrain `Blocking Issues` input.** It is hand-typed free text with a
+      comma-splitting hazard that has already caused one bug and one phantom
+      node. Whether Smartsheet can constrain it without losing the qualifier
+      syntax (`epic-x (Embedded, soft) [guess]`) is unknown - investigate before
+      committing to it. The validator covers the symptom in the meantime.
+- [ ] **Link the example render from the landing page.** It has been orphaned
+      since progress went non-zero - the zero-progress note was the only thing
+      that ever linked it, so today it is reachable only by typing the URL.
+
 ## Capability layer: finish the move to prak-v-model frontmatter
 
 The capability id, title, priority and Jira Initiative key now all come from
@@ -197,8 +229,8 @@ directly comparable across the two DAGs:
 | CAP-02, CAP-04, CAP-05, CAP-06, CAP-07 | 53 | 0 |
 
 Cross-team dependency is expressed by referencing the other team's epic id in
-`Blocking Epics`. It renders as an **external node** rather than resolving, since
-`Blocking Epics` only resolves ids within its own sheet. External nodes are drawn
+`Blocking Issues`. It renders as an **external node** rather than resolving, since
+`Blocking Issues` only resolves ids within its own sheet. External nodes are drawn
 for context and excluded from the referencing team's counts.
 
 ### Done 2026-08-18
@@ -210,7 +242,7 @@ for context and excluded from the referencing team's counts.
 - [x] Capability tiles link to their shared Jira Initiative parent.
 - [x] `tools/teams.py` registry added; both generators read it. `--team embedded`
       / `--team electronics` replace the long per-team command lines.
-- [x] **Fixed a silent edge-dropping bug.** `Blocking Epics` entries of the form
+- [x] **Fixed a silent edge-dropping bug.** `Blocking Issues` entries of the form
       `epic-x (Embedded, soft) [guess]` were split on the comma inside the
       qualifier list, producing garbage refs that then failed to resolve and were
       discarded. All 9 Electronics dependencies would have rendered as zero edges
@@ -231,7 +263,7 @@ for context and excluded from the referencing team's counts.
 
 ## Embedded-Core
 
-- [ ] Populate `Blocking Epics` in the tracker during the evaluation meetings.
+- [ ] Populate `Blocking Issues` in the tracker during the evaluation meetings.
       Until then the real DAG renders 0 edges across all 87 epics.
 - [x] ~~Commit the scheduled refresh workflow.~~ Done:
       `.github/workflows/refresh-dag.yml` is tracked and runs three times each
@@ -311,7 +343,7 @@ push - and the site updates itself from there.
 - Tracker grouping column renamed `Initiative` -> `Capability`; all 87 Embedded
   rows populated with capreq slugs, closing the 40-row unmapped gap.
 - Electronics tracker created and wired in; 15 epics, Jira keys `ET-2951`..`-2965`.
-- Two generator defects found and fixed, both silent: `Blocking Epics` entries
+- Two generator defects found and fixed, both silent: `Blocking Issues` entries
   were split on commas inside qualifiers (would have shown 0 edges for all 9
   Electronics dependencies), and unresolvable refs were dropped rather than
   drawn (made cross-team dependencies invisible).

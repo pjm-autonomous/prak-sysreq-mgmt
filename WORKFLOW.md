@@ -150,6 +150,10 @@ _Team SE. No GitHub access needed, no hand-off, no PR._
 
 1. Edit your team's Smartsheet tracker. That is the source of truth.
 2. Stop. Nothing else is required of you.
+   - In a hurry? Comment **`/refresh`** on any issue in the DAG repo and the
+     pages rebuild within a couple of minutes. Read access is enough - the
+     workflow runs with the repository's permissions, not yours. You must be
+     on `REFRESH_ALLOWLIST`; ask the owner to add you.
 3. The scheduled refresh re-reads the sheet, regenerates the DAG and the landing
    page, and commits. See [Publishing an update](#publishing-an-update) for the
    timing and for what still needs a human today.

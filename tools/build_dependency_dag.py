@@ -43,7 +43,7 @@ of them resolve their groupings against the same capreq files.
 The .mmd file carries the dependency graph only; the inventory is a flat list
 and a graph is the wrong representation for it.
 
-Dependency convention (the "Blocking Epics" column):
+Dependency convention (the "Blocking Issues" column):
   List the epics that must progress before THIS epic, as a comma/newline/
   semicolon separated list. Each token is an epic id (epic-<slug>) or a Jira
   key (MCHTRNCS-###), optionally tagged (hard) or (soft):
@@ -78,13 +78,19 @@ JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
 
 # Column titles we read (must match the tracker headers exactly).
 COLS = ["Epic", "Jira Key", "Title", "Capability",
-        "Baseline Priority", "2TS Required", "Blocking Epics"]
+        "Baseline Priority", "2TS Required", "Blocking Issues"]
 
 # Read when present, tolerated when absent. Eval Status drives a visual
 # indicator only - never an edge, a count, or a grouping - so a tracker or a
 # hand export without the column still renders, just without the marker.
 # Keeping it out of COLS is what stops load_csv hard-failing on the example
 # snapshot and on any export predating the column.
+# Headers that used to mean one of the columns above. Readers translate
+# them, so a snapshot or a hand export taken before a rename still loads
+# rather than failing the "missing columns" check. Renaming a tracker
+# column is a meeting-time decision; it should not strand old exports.
+COLUMN_ALIASES = {"Blocking Epics": "Blocking Issues"}
+
 OPTIONAL_COLS = ["Eval Status"]
 ALL_COLS = COLS + OPTIONAL_COLS
 
@@ -311,6 +317,7 @@ def load_live(sheet_id: int) -> list[dict]:
         rec = {t: "" for t in ALL_COLS}
         for cell in row.get("cells", []):
             title = id2title.get(cell.get("columnId"))
+            title = COLUMN_ALIASES.get(title, title)
             if title in rec:
                 rec[title] = str(cell.get("value", "") or "")
         records.append(rec)
@@ -328,11 +335,22 @@ def load_csv(path: str) -> list[dict]:
             rdr = csv.DictReader(fh)
             if rdr.fieldnames is None:
                 sys.exit(f"ERROR: {path} is empty.")
-            missing = [c for c in COLS if c not in rdr.fieldnames]
+            # Map each wanted column to whichever header this file actually
+            # uses - its own, or a legacy alias.
+            source = {}
+            for col in ALL_COLS:
+                if col in rdr.fieldnames:
+                    source[col] = col
+                    continue
+                legacy = next((old for old, new in COLUMN_ALIASES.items()
+                               if new == col and old in rdr.fieldnames), None)
+                if legacy:
+                    source[col] = legacy
+            missing = [c for c in COLS if c not in source]
             if missing:
                 sys.exit(f"ERROR: {path} is missing columns: {', '.join(missing)}")
-            return [{t: (row.get(t, "") or "").strip() for t in ALL_COLS}
-                    for row in rdr]
+            return [{col: (row.get(src, "") or "").strip()
+                     for col, src in source.items()} for row in rdr]
     except FileNotFoundError:
         sys.exit(f"ERROR: no such CSV: {path}")
     except OSError as exc:
@@ -347,7 +365,7 @@ def node_id(epic: str) -> str:
 
 
 def split_blocker_refs(raw: str) -> list[str]:
-    """Split the Blocking Epics cell on separators that are NOT inside a
+    """Split the Blocking Issues cell on separators that are NOT inside a
     qualifier. Naive splitting on every comma tears "epic-x (Embedded, soft)"
     in half, which silently produced garbage refs and then zero edges."""
     parts, buf, depth = [], [], 0
@@ -366,7 +384,7 @@ def split_blocker_refs(raw: str) -> list[str]:
 
 
 def parse_blockers(raw: str) -> list[tuple[str, str, bool, str]]:
-    """Parse the Blocking Epics cell into (ref, kind, provisional, hint).
+    """Parse the Blocking Issues cell into (ref, kind, provisional, hint).
 
     Accepted per entry:  <ref> [(qualifier, ...)] [[marker]]
     Qualifiers are comma-separated inside the parentheses, in any order:
@@ -438,7 +456,7 @@ def is_2ts(rec: dict) -> bool:
 # --------------------------------------------------------------------------- #
 def build_edges(records: list[dict], cross: dict | None = None
                 ) -> tuple[list[tuple[str, str, str, bool]], dict[str, dict]]:
-    """Resolve Blocking Epics into (blocker, dependent, kind, provisional) plus
+    """Resolve Blocking Issues into (blocker, dependent, kind, provisional) plus
     the synthetic records for any blocker that lives in another team's tracker.
 
     A ref that resolves inside this sheet is an ordinary node. A ref that does
@@ -465,7 +483,7 @@ def build_edges(records: list[dict], cross: dict | None = None
     edges, seen, externals = [], set(), {}
     for rec in records:
         dependent = rec["Epic"].strip()
-        for ref, kind, provisional, hint in parse_blockers(rec["Blocking Epics"]):
+        for ref, kind, provisional, hint in parse_blockers(rec["Blocking Issues"]):
             blocker = resolve(ref)
             if blocker is None:
                 blocker = EXTERNAL_PREFIX + ref
@@ -477,7 +495,7 @@ def build_edges(records: list[dict], cross: dict | None = None
                     "Capability": EXTERNAL_CAPABILITY,
                     "Baseline Priority": "",
                     "2TS Required": "",
-                    "Blocking Epics": "",
+                    "Blocking Issues": "",
                     "_ref": ref,
                     "_hint": hint,
                 })
@@ -621,7 +639,7 @@ def component_mermaid(group: list[str],
 
 EMPTY_GRAPH_MERMAID = """flowchart TB
 """ + CLASSDEFS + """
-  empty["No dependencies recorded yet<br/><small>fill in the tracker's Blocking Epics column</small>"]
+  empty["No dependencies recorded yet<br/><small>fill in the tracker's Blocking Issues column</small>"]
   class empty note;
 """
 
@@ -798,7 +816,7 @@ def render_graph_panels(components: list[list[str]],
             '  <p><strong>No dependencies recorded yet.</strong></p>\n'
             '  <p>Every epic is currently unblocked; the full list is in the inventory\n'
             '     above. Edges appear here as soon as the\n'
-            "     tracker's <strong>Blocking Epics</strong> column is filled in during the\n"
+            "     tracker's <strong>Blocking Issues</strong> column is filled in during the\n"
             '     evaluation meetings - list the epics that must finish first, tagged\n'
             '     <code>(hard)</code> or <code>(soft)</code>, then re-run the generator.</p>\n'
             "</div>"
@@ -1495,7 +1513,7 @@ def main() -> None:
             f"%% chain {i}\n" + component_mermaid(g, nodes_by_epic, edges)
             for i, g in enumerate(components, start=1))
     else:
-        mermaid_src = ("%% No dependencies recorded in the tracker's Blocking Epics "
+        mermaid_src = ("%% No dependencies recorded in the tracker's Blocking Issues "
                        "column yet.\n%% All " + str(len(records)) +
                        " epics are unblocked; see the HTML viewer for the inventory.\n"
                        + EMPTY_GRAPH_MERMAID)

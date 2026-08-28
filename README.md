@@ -6,6 +6,8 @@ The end-to-end SE process this repo sits in is documented in
 [WORKFLOW.md](WORKFLOW.md), with reusable prompts in
 [prompts/kickoff.md](prompts/kickoff.md).
 
+**Credentials:** see [CREDENTIALS.md](CREDENTIALS.md) - four things authenticate here and two of them are called "token".
+
 **Contributing?** Only the repo owner has write access. Which route to use —
 edit your Smartsheet tracker, or fork and open a PR — depends on what you are
 changing: see [Who changes what](WORKFLOW.md#who-changes-what-access-model).
@@ -30,7 +32,7 @@ reflects current sheet state.
 | [`agile-planning/embedded/dependency-dag.html`](agile-planning/embedded/dependency-dag.html) | Viewer — open in a browser. Loads mermaid from `vendor/`, so no network needed |
 | [`agile-planning/example/dependency-dag.example.*`](agile-planning/example/) | **Illustrative** render with sample edges, to show how a fully populated DAG looks (not real dependencies) |
 
-> Most rows still have an empty **Blocking Epics** column, so the real DAG is
+> Most rows still have an empty **Blocking Issues** column, so the real DAG is
 > mostly unblocked epics until the evaluation meetings fill it in. The
 > `.example.*` files show the intended end state.
 
@@ -39,7 +41,7 @@ reflects current sheet state.
 Two sections, in this order:
 
 1. **Dependency graph** — one zoomable, pannable panel per dependency chain.
-   Empty state until `Blocking Epics` is filled in.
+   Empty state until `Blocking Issues` is filled in.
 2. **Epic inventory** — a two-level drill-down, because 87 epic cards on one
    screen is a wall of rows nobody reads:
    - **Level 1:** one clickable tile per **PRD capability**, labelled with its
@@ -68,7 +70,7 @@ All 87 epics are mapped to one of 9 capabilities; there is no unassigned group.
 
 ### How it reads the sheet
 
-Each edge comes from the tracker's **Blocking Epics** column. For a given epic,
+Each edge comes from the tracker's **Blocking Issues** column. For a given epic,
 list the epics that must progress first, comma/newline/semicolon separated;
 each token is an epic id (`epic-<slug>`) or a Jira key (`MCHTRNCS-###`),
 optionally tagged `(hard)` or `(soft)`:
@@ -132,7 +134,7 @@ search scoped to `MCHTRNCS` will not find them.
 
 ### Dependencies
 
-Edges come from the **Blocking Epics** column — `(hard)` solid, `(soft)` dashed,
+Edges come from the **Blocking Issues** column — `(hard)` solid, `(soft)` dashed,
 untagged defaults to hard. An entry may carry a comma-separated qualifier list
 and a provisional marker:
 

@@ -93,7 +93,7 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(records)
 
-    blocked = sum(1 for r in records if r["Blocking Epics"].strip())
+    blocked = sum(1 for r in records if r["Blocking Issues"].strip())
     evaluated = sum(1 for r in records
                     if r["2TS Required"].strip() not in ("", "TBD"))
     print(f"wrote {args.out}  (from {source})")

@@ -31,7 +31,7 @@ else.
 Every team's epics hang off the same 9 PRD Capability Requirements, which are Jira
 `Initiative` issues (`MCHTRNCS-259`..`-266`, `-268`). **That is the only layer the
 trackers share - no epic appears in two of them.** Cross-team dependency belongs
-at the capability level, never in a tracker's `Blocking Epics` column, which
+at the capability level, never in a tracker's `Blocking Issues` column, which
 resolves epic ids within a single sheet only.
 
 ## Hard rules
@@ -57,6 +57,9 @@ resolves epic ids within a single sheet only.
 | `tools/build_dependency_dag.py` | Tracker -> Mermaid + drill-down viewer. Stdlib only. |
 | `tools/build_index.py` | Snapshots -> `index.html` landing/progress page. Stdlib only. |
 | `tools/teams.py` | The registry. Every per-team path below is derived from a slug here. |
+| `tools/validate_tracker.py` | Tracker -> findings, against the schema. `--live` also checks column types and formulas. |
+| `data/shared/tracker-schema.json` | **Input, not a build product.** The contract a tracker must satisfy. |
+| `CREDENTIALS.md` | What each credential reaches, where it lives, when it expires. |
 | `data/<slug>/tracker-snapshot.csv` | That team's snapshot - the 7 columns the generator reads, plus optional `Eval Status` |
 | `data/shared/capability-meta.json` | **Build product.** capreq slug -> `CAP-nn`, title, priority, Jira key. Regenerated from `prak-v-model`. |
 | `data/shared/capability-jira.json` | **Transitional.** Legacy hand-kept slug -> Jira key map; delete once every capreq carries `jira-key`. |
@@ -69,7 +72,8 @@ resolves epic ids within a single sheet only.
 
 `data/shared/` is the only directory not owned by a team, because the capability
 layer is the only thing the trackers have in common. Nothing in it is authored
-here - see *The capability layer* below.
+here **except `tracker-schema.json`**, which is the one hand-written input in
+that directory - see *The capability layer* below.
 
 ## Rebuilding everything
 
@@ -101,12 +105,20 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
 
 ## Conventions that are easy to get wrong
 
+- The dependency column is **`Blocking Issues`**. Renamed from `Blocking Epics`
+  on 2026-08-28, because a story can gate an epic too. Readers accept the old
+  header via `COLUMN_ALIASES`, so exports predating the rename still load.
+- **Run `python3 tools/validate_tracker.py` before trusting a DAG.** A blocker
+  that resolves to nothing draws a phantom node under *other tracker* that is
+  indistinguishable from a real cross-team dependency - that is exactly what
+  `Unknown` did on 2026-08-27. The validator resolves blockers across *every*
+  tracker, so a legitimate cross-team reference is silent.
 - The tracker's grouping column is **`Capability`**, holding a **capreq slug**
   (the capreq filename with `capreq-` dropped). It was renamed from `Initiative`
   on 2026-08-18. The slug resolves to `capreq-<slug>.md` in `prak-v-model`.
 - Electronics epics are project **`ET`**, not `MCHTRNCS`. A Jira search scoped to
   `MCHTRNCS` will not find them - this already caused one wrong conclusion.
-- `Blocking Epics` direction is **blocker -> dependent**. `(hard)` means cannot
+- `Blocking Issues` direction is **blocker -> dependent**. `(hard)` means cannot
   start, `(soft)` means cannot finish; untagged defaults to hard.
 - A blocker entry may carry a comma-separated qualifier list and a marker:
   `epic-x (Embedded, soft) [guess]`. Qualifiers other than hard/soft are hints
@@ -186,7 +198,7 @@ it does. Retire it once that note comes back empty.
 
 Embedded-Core and Electronics are live: 102 epics, with the first blockers
 recorded (Embedded 2 hard edges; Electronics 1 hard + 8 soft, 9 of them still
-`[guess]`). Most rows still have an empty `Blocking Epics` because the evaluation
+`[guess]`). Most rows still have an empty `Blocking Issues` because the evaluation
 meetings have not all happened yet. `dependency-dag.example.*` shows what a fully
 populated DAG looks like.
 

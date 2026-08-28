@@ -21,6 +21,11 @@ on:
     - cron: "0 18 * * 1-5"      # 12:00 MDT / 11:00 MST
     - cron: "0 23 * * 1-5"      # 17:00 MDT / 16:00 MST
   workflow_dispatch:
+  # Callable so refresh-on-comment.yml reuses this definition instead of
+  # duplicating it. A GITHUB_TOKEN cannot trigger workflow_dispatch (GitHub
+  # blocks that to prevent loops), so workflow_call is the way one workflow
+  # runs another.
+  workflow_call:
 
 permissions:
   contents: write
@@ -34,6 +39,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The landing page's change digest diffs committed snapshots
+          # against recent history. The default depth-1 checkout has none,
+          # so the digest would silently render empty on every run.
+          fetch-depth: 50
 
       - uses: actions/setup-python@v5
         with:
@@ -135,6 +145,36 @@ jobs:
           for t in $(python3 tools/teams.py --refreshable); do
             python3 tools/export_snapshot.py --team "$t"
           done
+
+      - name: Validate the trackers
+        # Runs after the snapshot pull, before the build, so a tracker fault is
+        # named rather than published as a plausible-looking diagram. Does NOT
+        # fail the job: the previous snapshot is already committed and the site
+        # should keep serving, so a data fault is reported and the refresh
+        # continues. The job summary is where an SE will actually see it.
+        id: validate
+        continue-on-error: true
+        run: |
+          set +e
+          python3 tools/validate_tracker.py > validation.txt 2>&1
+          status=$?
+          set -e
+          cat validation.txt
+          {
+            if [ "$status" -eq 0 ]; then
+              echo "### Tracker validation: clean"
+            else
+              echo "### Tracker validation: problems found"
+              echo
+              echo "These do not stop the refresh, but the published DAGs will"
+              echo "reflect them until the tracker is corrected."
+            fi
+            echo
+            echo '```'
+            cat validation.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f validation.txt
 
       - name: Rebuild every DAG, plus the example render
         # Offline from the committed snapshots - the ones just refreshed above if

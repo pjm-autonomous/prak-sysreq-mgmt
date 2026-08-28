@@ -1,0 +1,112 @@
+name: Refresh on comment
+
+# Lets an SE rebuild the published pages without write access to this repo.
+#
+# workflow_dispatch - the Actions "Run workflow" button - requires write, and
+# there is no dispatch-only permission, so handing out that button means handing
+# out write to everything. An issue_comment workflow runs with the *repository's*
+# permissions rather than the commenter's, so read access is enough to use it and
+# nobody gains the ability to push.
+#
+# Usage: comment "/refresh" on any issue.
+#
+# The allowlist is the repo variable REFRESH_ALLOWLIST, comma-separated logins:
+#   gh variable set REFRESH_ALLOWLIST --repo <repo> --body "alice,bob"
+# The repository owner is always allowed, so the variable can stay unset until
+# there is someone else to add.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read          # the reusable refresh job raises this for itself
+  issues: write           # to acknowledge and report back in the thread
+
+concurrency:
+  # One at a time per issue, so a double-comment cannot race two refreshes.
+  group: refresh-comment-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  authorise:
+    # Cheap string test first so the job does not spin up on ordinary comments.
+    if: startsWith(github.event.comment.body, '/refresh')
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+    steps:
+      - id: check
+        env:
+          ALLOWLIST: ${{ vars.REFRESH_ALLOWLIST }}
+          ACTOR: ${{ github.event.comment.user.login }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          allowed=false
+          if [ "$ACTOR" = "$OWNER" ]; then
+            allowed=true
+          else
+            # Compare whole entries: a substring test would let "bob" through
+            # on an allowlist containing "bobby".
+            IFS=',' read -ra entries <<< "$ALLOWLIST"
+            for entry in "${entries[@]}"; do
+              trimmed="$(echo "$entry" | tr -d '[:space:]')"
+              if [ -n "$trimmed" ] && [ "$trimmed" = "$ACTOR" ]; then
+                allowed=true
+                break
+              fi
+            done
+          fi
+          echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+          if [ "$allowed" = "true" ]; then
+            echo "::notice::$ACTOR is authorised to refresh"
+          else
+            echo "::notice::$ACTOR is not on REFRESH_ALLOWLIST; ignoring"
+          fi
+
+      - name: Acknowledge
+        if: steps.check.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --silent -X POST \
+            "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content=eyes || true
+
+      - name: Explain the refusal
+        if: steps.check.outputs.allowed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "@${{ github.event.comment.user.login }} is not on \`REFRESH_ALLOWLIST\`, so this refresh was not run. Ask the repo owner to add you."
+
+  refresh:
+    needs: authorise
+    if: needs.authorise.outputs.allowed == 'true'
+    # Calls the scheduled workflow rather than duplicating it, so there is
+    # exactly one definition of what a refresh does.
+    uses: ./.github/workflows/refresh-dag.yml
+    secrets: inherit
+
+  report:
+    needs: [authorise, refresh]
+    if: always() && needs.authorise.outputs.allowed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT: ${{ needs.refresh.result }}
+        run: |
+          if [ "$RESULT" = "success" ]; then
+            body="Refresh finished. The published pages rebuild within a minute or two: https://pjm-autonomous.github.io/prak-sysreq-mgmt/
+
+          If nothing changed on the site, the trackers had not moved since the last run."
+          else
+            body="Refresh **failed** ($RESULT). See the run log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          gh issue comment "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" --body "$body"

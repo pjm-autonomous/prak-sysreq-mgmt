@@ -1,4 +1,4 @@
-Epic,Jira Key,Title,Capability,Baseline Priority,2TS Required,Blocking Epics,Eval Status
+Epic,Jira Key,Title,Capability,Baseline Priority,2TS Required,Blocking Issues,Eval Status
 epic-accept-c2-movement-request,ET-2951,Accept C2 Movement Request over Runtime ICD,motion-authorization,Should Have,Yes,,Needs Info
 epic-acknowledge-path-to-c2,ET-2965,Acknowledge Path Acceptance or Rejection to C2,path-execution-and-objectives-translation,Should Have,Yes,"epic-validate-supplied-path (Embedded, soft) [guess]",Needs Info
 epic-confirm-auto-manual-in-auto,ET-2958,Confirm Auto/Manual Switch in Auto,motion-authorization,Must Have,Yes,,Needs Info

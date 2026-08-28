@@ -48,6 +48,8 @@
   .cap-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; }
   .key { font-size: .82rem; }
   .wrap { overflow-x: auto; }
+  .digest { margin: .2rem 0 0; padding-left: 1.1rem; font-size: .9rem; }
+  .digest li { margin: .15rem 0; }
   .note { border-left: 3px solid var(--accent); background: var(--panel);
           padding: .6rem .8rem; font-size: .88rem; margin: 1rem 0; }
   footer { margin-top: 2.5rem; padding-top: .8rem; border-top: 1px solid var(--line);
@@ -124,6 +126,38 @@ recorded but still marked a guess, not yet confirmed in a meeting.</p>
   </section>
 </div>
 
+
+
+<h2>What changed in the last 7 days</h2>
+<p class="muted">Counted by diffing the committed snapshots against
+<code>dca98d5</code>. Only the columns the standing meetings move are
+reported &mdash; 2TS decisions, dependencies, and evaluation status.</p>
+<ul class="digest"><li><b>Embedded-Core</b>: 11 &times; 2TS Required</li></ul>
+
+
+<h2>Cross-team dependencies</h2>
+<p class="muted">Work one team is waiting on another to finish. Each of these
+appears inside the <em>dependent</em> team's DAG as an external node &mdash; so
+without this table the blocking team has no reason to ever see it.
+<b>10</b> recorded.</p>
+<div class="wrap">
+<table>
+  <thead><tr><th>Blocking team</th><th>Blocking issue</th>
+             <th>Waiting team</th><th>Waiting on it</th></tr></thead>
+  <tbody>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-execute-path-with-motion-limits</td><td>Electronics</td><td>Publish Path-Execution Telemetry and Completion <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-execute-path-with-motion-limits</td><td>Electronics</td><td>Report Path-Execution Events to C2 <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-gate-continuous-motion-authorization</td><td>Electronics</td><td>Publish Motion-Authorization State and Diagnostics <span class="muted">&middot; guess</span></td></tr>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-gate-teleop-session-on-motion-auth</td><td>Electronics</td><td>Validate Tele-op ICD at Session Initiation <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-teleop-connection-loss-safe-behavior</td><td>Electronics</td><td>Detect and Report Tele-op Link / Motion-Auth Loss <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-teleop-input-staleness-timeout</td><td>Electronics</td><td>Validate Tele-op Input Against Active ICD <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-validate-supplied-path</td><td>Electronics</td><td>Acknowledge Path Acceptance or Rejection to C2 <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-withhold-motion-until-recovery-authorized</td><td>Electronics</td><td>Record Recovery Acknowledgment <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>not yet tracked</b></td><td class="cap-id">ODOA-5527 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Continuous Geofence Enforcement</td></tr>
+    <tr><td><b>not yet tracked</b></td><td class="cap-id">ODOA-5527 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Emit Obstacle Stop or Avoidance Actuation</td></tr>
+  </tbody>
+</table>
+</div>
 
 
 <h2>Shared PRD capabilities</h2>

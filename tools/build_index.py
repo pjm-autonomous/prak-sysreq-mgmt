@@ -12,7 +12,7 @@ build_dependency_dag.py. Nothing here is hand-maintained.
 Progress is measured two ways, both from tracker columns:
   evaluated    - 2TS Required is set to something other than TBD, i.e. the epic
                  has been through an evaluation meeting.
-  dependencies - Blocking Epics is non-empty, i.e. the epic's dependencies have
+  dependencies - Blocking Issues is non-empty, i.e. the epic's dependencies have
                  been captured. This is what gives the DAG its edges.
 
 Standard library only; no third-party dependencies.
@@ -25,12 +25,14 @@ import csv
 import html
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 import teams as team_registry  # noqa: E402
+from build_dependency_dag import COLUMN_ALIASES, parse_blockers  # noqa: E402
 
 ROOT = team_registry.ROOT
 JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
@@ -81,7 +83,7 @@ def evaluated(rows: list[dict]) -> int:
 
 
 def with_dependencies(rows: list[dict]) -> int:
-    return sum(1 for r in rows if r["Blocking Epics"].strip())
+    return sum(1 for r in rows if r["Blocking Issues"].strip())
 
 
 def provisional(rows: list[dict]) -> int:
@@ -90,7 +92,7 @@ def provisional(rows: list[dict]) -> int:
     The DAG viewer labels these 'guess'; the landing page must not present them
     as settled."""
     return sum(1 for r in rows
-               if r["Blocking Epics"].strip() and "[guess]" in r["Blocking Epics"])
+               if r["Blocking Issues"].strip() and "[guess]" in r["Blocking Issues"])
 
 
 def team_card(team: dict, rows: list[dict]) -> str:
@@ -123,6 +125,74 @@ def team_card(team: dict, rows: list[dict]) -> str:
   </section>'''
 
 
+def cross_team_edges(loaded: dict) -> list[dict]:
+    """Every blocker that leaves the tracker it was recorded in.
+
+    This is the one thing the per-team DAGs structurally cannot show. A blocker
+    on another team's epic renders inside the dependent team's viewer, under
+    "other tracker" - so the team that is *blocking* has no reason to open the
+    page where their obligation appears. Embedded has been waiting on ODOA-5527
+    since before ODOA had a tracker, and nobody on ODOA was told.
+    """
+    owner = {epic: team for team, rows in loaded.items()
+             for epic in (r["Epic"].strip() for r in rows)}
+    edges = []
+    for team, rows in loaded.items():
+        for row in rows:
+            for ref, kind, provisional, hint in parse_blockers(
+                    row.get("Blocking Issues", "")):
+                if owner.get(ref) == team:
+                    continue                       # internal, the DAG shows it
+                edges.append({
+                    "dependent_team": team,
+                    "dependent": row["Epic"].strip(),
+                    "dependent_title": row.get("Title", "").strip(),
+                    "blocker": ref,
+                    "blocker_team": owner.get(ref) or (hint or "not yet tracked"),
+                    "resolved": ref in owner,
+                    "kind": kind,
+                    "provisional": provisional,
+                })
+    return sorted(edges, key=lambda e: (e["blocker_team"], e["blocker"]))
+
+
+def cross_team_html(edges: list[dict]) -> str:
+    if not edges:
+        return ""
+    rows = []
+    for e in edges:
+        blocker = esc(e["blocker"])
+        if not e["resolved"]:
+            blocker += ' <span class="muted">(no tracker)</span>'
+        tags = []
+        if e["kind"] == "soft":
+            tags.append("soft")
+        if e["provisional"]:
+            tags.append("guess")
+        tag_html = (f' <span class="muted">&middot; {" &middot; ".join(tags)}</span>'
+                    if tags else "")
+        rows.append(
+            f'    <tr><td><b>{esc(e["blocker_team"])}</b></td>'
+            f'<td class="cap-id">{blocker}</td>'
+            f'<td>{esc(e["dependent_team"])}</td>'
+            f'<td>{esc(e["dependent_title"] or e["dependent"])}{tag_html}</td></tr>')
+    return f"""<h2>Cross-team dependencies</h2>
+<p class="muted">Work one team is waiting on another to finish. Each of these
+appears inside the <em>dependent</em> team's DAG as an external node &mdash; so
+without this table the blocking team has no reason to ever see it.
+<b>{len(edges)}</b> recorded.</p>
+<div class="wrap">
+<table>
+  <thead><tr><th>Blocking team</th><th>Blocking issue</th>
+             <th>Waiting team</th><th>Waiting on it</th></tr></thead>
+  <tbody>
+{chr(10).join(rows)}
+  </tbody>
+</table>
+</div>
+"""
+
+
 def pending_card(team: dict) -> str:
     """A team that is registered and has a container but no tracker yet.
 
@@ -139,6 +209,105 @@ def pending_card(team: dict) -> str:
     Smartsheet tracker stood up and connected (steps 12&ndash;14), before a DAG and
     progress numbers exist.</p>
   </section>'''
+
+
+def git(*args: str) -> str:
+    """Run git in the repo, returning "" when it cannot answer.
+
+    Everything here degrades to no digest rather than a failed build: CI checks
+    out at depth 1 by default, so the history this needs may simply not be
+    present.
+    """
+    try:
+        out = subprocess.run(("git",) + args, cwd=ROOT, capture_output=True,
+                             text=True, timeout=30)
+        return out.stdout if out.returncode == 0 else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+# Columns worth reporting on. Title and Jira Key churn without meaning anything
+# for progress; these three are what the standing meetings actually move.
+DIGEST_COLS = ("2TS Required", "Blocking Issues", "Eval Status")
+
+
+def recent_changes(days: int) -> tuple[list[str], str]:
+    """What moved in the snapshots over the last `days`. ([lines], note)."""
+    since = git("log", f"--since={days} days ago", "--format=%H", "--reverse",
+                "--", "data")
+    commits = [c for c in since.splitlines() if c.strip()]
+    if not commits:
+        return [], ""
+    # Baseline is the parent of the oldest commit in the window when that is
+    # readable, else the earliest commit in the window where the file exists.
+    # A path can appear or move mid-window - the per-team containers landed
+    # that way - and anchoring to one fixed commit silently yields no digest.
+    candidates = [git("rev-parse", f"{commits[0]}~1").strip() or commits[0]]
+    candidates += commits
+
+    lines = []
+    base_used = candidates[0]
+    for team in TEAMS:
+        path = team["snapshot"]
+        before_raw = ""
+        for candidate in candidates:
+            before_raw = git("show", f"{candidate}:{path}")
+            if before_raw:
+                base_used = candidate
+                break
+        if not before_raw:
+            continue                                  # new team in this window
+        try:
+            after = {r["Epic"].strip(): r for r in load_rows(
+                os.path.join(ROOT, path))}
+        except OSError:
+            continue
+        reader = csv.DictReader(before_raw.splitlines())
+        historical = list(reader.fieldnames or [])
+        # Translate headers the baseline used under an older name, so a rename
+        # does not read as every row changing.
+        before = {}
+        for raw in reader:
+            row = {COLUMN_ALIASES.get(k, k): v for k, v in raw.items()}
+            if row.get("Epic", "").strip():
+                before[row["Epic"].strip()] = row
+        comparable = {COLUMN_ALIASES.get(h, h) for h in historical}
+
+        added = sorted(set(after) - set(before))
+        removed = sorted(set(before) - set(after))
+        moved = {c: 0 for c in DIGEST_COLS}
+        for epic in set(after) & set(before):
+            for col in DIGEST_COLS:
+                # A column absent from the baseline cannot have "changed" - it
+                # was introduced. Comparing it would report the whole tracker.
+                if col not in comparable:
+                    continue
+                if (before[epic].get(col) or "").strip() != (after[epic].get(col) or "").strip():
+                    moved[col] += 1
+        bits = []
+        if added:
+            bits.append(f"{len(added)} epic(s) added")
+        if removed:
+            bits.append(f"{len(removed)} removed")
+        for col, n in moved.items():
+            if n:
+                bits.append(f"{n} &times; {esc(col)}")
+        if bits:
+            lines.append(f"<b>{esc(team['name'])}</b>: " + ", ".join(bits))
+    return lines, base_used[:7]
+
+
+def digest_html(days: int) -> str:
+    lines, base = recent_changes(days)
+    if not lines:
+        return ""
+    items = "".join(f"<li>{ln}</li>" for ln in lines)
+    return f"""<h2>What changed in the last {days} days</h2>
+<p class="muted">Counted by diffing the committed snapshots against
+<code>{esc(base)}</code>. Only the columns the standing meetings move are
+reported &mdash; 2TS decisions, dependencies, and evaluation status.</p>
+<ul class="digest">{items}</ul>
+"""
 
 
 def capability_rows(per_team: list[collections.Counter], meta: dict,
@@ -209,6 +378,8 @@ TEMPLATE = """<!doctype html>
   .cap-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; }
   .key { font-size: .82rem; }
   .wrap { overflow-x: auto; }
+  .digest { margin: .2rem 0 0; padding-left: 1.1rem; font-size: .9rem; }
+  .digest li { margin: .15rem 0; }
   .note { border-left: 3px solid var(--accent); background: var(--panel);
           padding: .6rem .8rem; font-size: .88rem; margin: 1rem 0; }
   footer { margin-top: 2.5rem; padding-top: .8rem; border-top: 1px solid var(--line);
@@ -232,6 +403,10 @@ __CARDS__
 </div>
 
 __PROGRESS_NOTE__
+
+__DIGEST__
+
+__CROSS_TEAM__
 
 <h2>Shared PRD capabilities</h2>
 <p class="muted">Every team's epics hang off these Jira Initiative issues. This is
@@ -274,6 +449,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default=os.path.join(ROOT, "index.html"))
+    ap.add_argument("--digest-days", type=int, default=7,
+                    help="window for the 'what changed' digest (0 disables)")
     ap.add_argument("--timestamp", default="",
                     help="override the 'Updated' stamp (default: today, UTC)")
     args = ap.parse_args()
@@ -283,6 +460,7 @@ def main() -> None:
     cap_jira = load_json(team_registry.abspath(team_registry.CAPABILITY_JIRA))
 
     cards, per_team, totals, names, pending = [], [], [], [], []
+    loaded: dict[str, list[dict]] = {}
     any_progress = False
     for team in TEAMS:
         path = os.path.join(ROOT, team["snapshot"])
@@ -300,6 +478,7 @@ def main() -> None:
             pending.append(team["name"])
             continue
         rows = load_rows(path)
+        loaded[team["name"]] = rows
         cards.append(team_card(team, rows))
         per_team.append(collections.Counter(
             r["Capability"].strip() for r in rows if r["Capability"].strip()))
@@ -318,6 +497,8 @@ def main() -> None:
                     "".join(f'<th class="num">{esc(n)}</th>' for n in names))
            .replace("__TEAM_TOTALS__",
                     "".join(f'<th class="num">{t}</th>' for t in totals))
+           .replace("__CROSS_TEAM__", cross_team_html(cross_team_edges(loaded)))
+           .replace("__DIGEST__", digest_html(args.digest_days))
            .replace("__CAP_ROWS__", capability_rows(per_team, meta, cap_jira))
            .replace("__EXAMPLE_DAG__", esc(EXAMPLE_DAG))
            .replace("__EXAMPLE_NAME__", esc(os.path.basename(EXAMPLE_DAG)))
