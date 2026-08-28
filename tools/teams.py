@@ -49,9 +49,12 @@ TEAMS: dict[str, dict] = {
         "name": "Embedded-Core",
         "title": "Embedded-Core Epic Dependency DAG",
         "jira": "VSP-Embedded, project MCHTRNCS",
-        "sheet_id": 8066207570677636,
+        # Re-created 2026-08-27 after a Smartsheet account reconfiguration
+        # corrupted the originals; restored from local exports, so the sheet
+        # id, name and permalink all changed. Old id 8066207570677636.
+        "sheet_id": 5240263122308996,
         "sheet_url": ("https://app.smartsheet.com/sheets/"
-                      "gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1"),
+                      "87fgrjP84CvHF3FvFm3Q7gmP4xchH4wVWxCjffG1"),
         "refresh": True,     # has a live tracker the scheduled job can read
     },
     "electronics": {
@@ -59,9 +62,11 @@ TEAMS: dict[str, dict] = {
         "name": "Electronics",
         "title": "Electronics Epic Dependency DAG",
         "jira": "Electrical Platform, project ET",
-        "sheet_id": 5660443916849028,
+        # Re-created 2026-08-27 with the Embedded tracker; old id
+        # 5660443916849028.
+        "sheet_id": 2558444740497284,
         "sheet_url": ("https://app.smartsheet.com/sheets/"
-                      "JXr3hJVXxXPm6HxWWQQ845G2568xRcG35vJHRJ31"),
+                      "f8xHmwRmFc62R5QCVM6p9ffMrVrrgJm64FMrp8x1"),
         "refresh": True,
     },
     # --- Registered, container created, not yet onboarded --------------------
@@ -158,6 +163,15 @@ def abspath(rel: str) -> str:
 def _cli() -> None:
     """Print slugs for shell loops, so CI never hardcodes a team list."""
     import sys
+    # Force LF. On Windows, text-mode stdout translates newlines to CRLF,
+    # and a shell loop like `for t in $(teams.py --all)` then yields a
+    # trailing CR on each slug, which argparse rejects as an invalid
+    # choice - so the documented rebuild loop silently skips teams on the
+    # very platform it gets run from by hand.
+    try:
+        sys.stdout.reconfigure(newline="\n")
+    except AttributeError:      # pragma: no cover - Python < 3.7
+        pass
     flag = sys.argv[1] if len(sys.argv) > 1 else ""
     if flag == "--refreshable":       # teams the scheduled job can pull
         print("\n".join(refreshable()))

@@ -18,7 +18,7 @@ A dependency graph of the 87 Embedded-Core (VSP-Embedded) PRAK epics, generated
 changes. Nothing here is hand-drawn — re-run the generator and the diagram
 reflects current sheet state.
 
-- **Tracker (source of truth):** [Embedded-Core Epic Decomposition Tracker](https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1)
+- **Tracker (source of truth):** [prak-embedded-core-epics](https://app.smartsheet.com/sheets/87fgrjP84CvHF3FvFm3Q7gmP4xchH4wVWxCjffG1)
 - **Generator:** [`tools/build_dependency_dag.py`](tools/build_dependency_dag.py)
 - **Artifacts:** [`agile-planning/embedded/`](agile-planning/embedded/)
 
@@ -107,7 +107,7 @@ the only secret required.
 Dependency graph of the 15 Electronics (`ET-*`) PRAK epics, generated from the
 live Smartsheet tracker so it re-populates whenever the sheet changes.
 
-- **Tracker (source of truth):** [Electronics Epic Decomposition Tracker](https://app.smartsheet.com/sheets/JXr3hJVXxXPm6HxWWQQ845G2568xRcG35vJHRJ31)
+- **Tracker (source of truth):** [prak-electronics-epics](https://app.smartsheet.com/sheets/f8xHmwRmFc62R5QCVM6p9ffMrVrrgJm64FMrp8x1)
 - **Generator:** `tools/build_dependency_dag.py --team electronics`
 - **Artifacts:** [`agile-planning/electronics/`](agile-planning/electronics/)
 
@@ -192,8 +192,8 @@ agile-planning/<slug>/standingagenda.*  that team's standing meeting agenda
 
 | Team | Preset | Sheet id | Jira |
 | ------ | -------- | ---------- | ------ |
-| Embedded-Core | `--team embedded` | `8066207570677636` | project `MCHTRNCS`, VSP-Embedded |
-| Electronics | `--team electronics` | `5660443916849028` | project `ET`, Electrical Platform |
+| Embedded-Core | `--team embedded` | `5240263122308996` | project `MCHTRNCS`, VSP-Embedded |
+| Electronics | `--team electronics` | `2558444740497284` | project `ET`, Electrical Platform |
 | ODOA | `--team odoa` | — not onboarded | project `ODOA`, ODOA Platform |
 | GNC | `--team gnc` | — not onboarded | project `GNC`, GNC Platform |
 | Mobius | `--team mobius` | — not onboarded | project `MP`, Mobius Platform |

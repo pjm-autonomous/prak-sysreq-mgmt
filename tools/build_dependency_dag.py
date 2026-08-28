@@ -71,8 +71,8 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import teams as team_registry  # noqa: E402
 
-DEFAULT_SHEET_ID = 8066207570677636
-SHEET_URL = "https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1"
+DEFAULT_SHEET_ID = 5240263122308996
+SHEET_URL = "https://app.smartsheet.com/sheets/87fgrjP84CvHF3FvFm3Q7gmP4xchH4wVWxCjffG1"
 JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
 
 # Column titles we read (must match the tracker headers exactly).

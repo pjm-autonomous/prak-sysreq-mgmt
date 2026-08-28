@@ -36,8 +36,8 @@ release loop is manual but small:
 
 ```bash
 # 1. In Smartsheet: File > Export > Export to CSV, for each sheet you changed.
-#    Embedded  -> sheet 8066207570677636
-#    Electronics -> sheet 5660443916849028
+#    prak-embedded-core-epics  -> sheet 5240263122308996
+#    prak-electronics-epics    -> sheet 2558444740497284
 
 # 2. Prune the export into that team's snapshot. This overwrites the committed
 #    data/<team>/tracker-snapshot.csv with only the 7 generator columns, sorted

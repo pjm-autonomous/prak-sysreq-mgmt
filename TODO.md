@@ -173,7 +173,7 @@ Containers exist and the registry knows them; nothing else does.
 
 ## Electronics Epic Dependency DAG
 
-Status: **live.** Tracker exists (sheet `5660443916849028`), 15 epics, 9
+Status: **live.** Tracker exists (sheet `2558444740497284`), 15 epics, 9
 dependencies recorded, DAG generating from it.
 
 ### Decision: isolated tracking
@@ -281,7 +281,7 @@ for context and excluded from the referencing team's counts.
       Committing the refreshed `data/<team>/tracker-snapshot.csv` keeps the
       published site current, since Pages rebuilds on every push.
       Ask IT for: a Smartsheet API access token (Personal Settings > API Access)
-      with read on sheets `8066207570677636` and `5660443916849028`.
+      with read on sheets `5240263122308996` and `2558444740497284`.
 - [x] ~~**GitHub Actions workflow creation.**~~ Resolved: the `workflow` OAuth
       scope was granted and `.github/workflows/refresh-dag.yml` is committed and
       tracked. It still needs `SMARTSHEET_ACCESS_TOKEN` as a repo secret to do

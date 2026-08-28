@@ -11,8 +11,8 @@ layer. Each team owns a container - `data/<slug>/` for its snapshot,
 
 | Team | Slug | Epics | Jira | Tracker of record |
 |------|------|------:|------|-------------------|
-| Embedded-Core | `embedded` | 87 | project `MCHTRNCS`, team VSP-Embedded | Smartsheet `8066207570677636` |
-| Electronics | `electronics` | 15 | project `ET`, team Electrical Platform | Smartsheet `5660443916849028` |
+| Embedded-Core | `embedded` | 87 | project `MCHTRNCS`, team VSP-Embedded | Smartsheet `5240263122308996` |
+| Electronics | `electronics` | 15 | project `ET`, team Electrical Platform | Smartsheet `2558444740497284` |
 | ODOA | `odoa` | - | project `ODOA`, ODOA Platform | none yet |
 | GNC | `gnc` | - | project `GNC`, GNC Platform | none yet |
 | Mobius | `mobius` | - | project `MP`, Mobius Platform | none yet |
