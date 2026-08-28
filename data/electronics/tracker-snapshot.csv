@@ -1,16 +1,16 @@
-Epic,Jira Key,Title,Capability,Baseline Priority,2TS Required,Blocking Epics
-epic-accept-c2-movement-request,ET-2951,Accept C2 Movement Request over Runtime ICD,motion-authorization,Should Have,Yes,
-epic-acknowledge-path-to-c2,ET-2965,Acknowledge Path Acceptance or Rejection to C2,path-execution-and-objectives-translation,Should Have,Yes,"epic-validate-supplied-path (Embedded, soft) [guess]"
-epic-confirm-auto-manual-in-auto,ET-2958,Confirm Auto/Manual Switch in Auto,motion-authorization,Must Have,Yes,
-epic-detect-teleop-link-loss-and-report,ET-2960,Detect and Report Tele-op Link / Motion-Auth Loss,tele-operation,Must Have,Yes,"epic-teleop-connection-loss-safe-behavior (Embedded, soft) [guess]"
-epic-no-video-stream-on-teleop-icd,ET-2961,No Video Stream on Tele-op ICD,tele-operation,Must Have,Yes,
-epic-publish-motion-authorization-state,ET-2952,Publish Motion-Authorization State and Diagnostics,motion-authorization,Should Have,Yes,"epic-gate-continuous-motion-authorization (Embedded, hard) [guess]"
-epic-publish-path-execution-telemetry,ET-2953,Publish Path-Execution Telemetry and Completion,path-execution-and-objectives-translation,Should Have,Yes,"epic-execute-path-with-motion-limits (Embedded, soft) [guess]"
-epic-publish-teleop-override-notification,ET-2962,Publish Tele-op Override Notification,tele-operation,Must Have,Yes,
-epic-publish-teleop-situational-feedback,ET-2963,Publish Tele-op Situational-Awareness Feedback,tele-operation,Should Have,Yes,
-epic-publish-visible-operating-indications,ET-2956,Publish Visible Operating-Mode and Safe-State Indications,motion-authorization,Must Have,Yes,"epic-publish-motion-authorization-state (ET-2952, soft) [guess]"
-epic-record-recovery-acknowledgment,ET-2957,Record Recovery Acknowledgment,motion-authorization,Must Have,Yes,"epic-withhold-motion-until-recovery-authorized (Embedded, soft) [guess]"
-epic-report-execution-events-to-c2,ET-2959,Report Path-Execution Events to C2,observable-runtime-state,Must Have,Yes,"epic-execute-path-with-motion-limits (Embedded, soft) [guess]"
-epic-require-los-ack-at-session-init,ET-2964,Require Line-of-Sight Acknowledgment at Session Init,tele-operation,Must Have,Yes,
-epic-validate-teleop-icd-at-session-init,ET-2954,Validate Tele-op ICD at Session Initiation,tele-operation,Should Have,Yes,"epic-gate-teleop-session-on-motion-auth (Embedded, soft) [guess]"
-epic-validate-teleop-input-against-icd,ET-2955,Validate Tele-op Input Against Active ICD,tele-operation,Should Have,Yes,"epic-teleop-input-staleness-timeout (Embedded, soft) [guess]"
+Epic,Jira Key,Title,Capability,Baseline Priority,2TS Required,Blocking Epics,Eval Status
+epic-accept-c2-movement-request,ET-2951,Accept C2 Movement Request over Runtime ICD,motion-authorization,Should Have,Yes,,Needs Info
+epic-acknowledge-path-to-c2,ET-2965,Acknowledge Path Acceptance or Rejection to C2,path-execution-and-objectives-translation,Should Have,Yes,"epic-validate-supplied-path (Embedded, soft) [guess]",Needs Info
+epic-confirm-auto-manual-in-auto,ET-2958,Confirm Auto/Manual Switch in Auto,motion-authorization,Must Have,Yes,,Needs Info
+epic-detect-teleop-link-loss-and-report,ET-2960,Detect and Report Tele-op Link / Motion-Auth Loss,tele-operation,Must Have,Yes,"epic-teleop-connection-loss-safe-behavior (Embedded, soft) [guess]",Needs Info
+epic-no-video-stream-on-teleop-icd,ET-2961,No Video Stream on Tele-op ICD,tele-operation,Must Have,Yes,,Needs Info
+epic-publish-motion-authorization-state,ET-2952,Publish Motion-Authorization State and Diagnostics,motion-authorization,Should Have,Yes,"epic-gate-continuous-motion-authorization (Embedded, hard) [guess]",Needs Info
+epic-publish-path-execution-telemetry,ET-2953,Publish Path-Execution Telemetry and Completion,path-execution-and-objectives-translation,Should Have,Yes,"epic-execute-path-with-motion-limits (Embedded, soft) [guess]",Needs Info
+epic-publish-teleop-override-notification,ET-2962,Publish Tele-op Override Notification,tele-operation,Must Have,Yes,,Needs Info
+epic-publish-teleop-situational-feedback,ET-2963,Publish Tele-op Situational-Awareness Feedback,tele-operation,Should Have,Yes,,Needs Info
+epic-publish-visible-operating-indications,ET-2956,Publish Visible Operating-Mode and Safe-State Indications,motion-authorization,Must Have,Yes,"epic-publish-motion-authorization-state (ET-2952, soft) [guess]",Needs Info
+epic-record-recovery-acknowledgment,ET-2957,Record Recovery Acknowledgment,motion-authorization,Must Have,Yes,"epic-withhold-motion-until-recovery-authorized (Embedded, soft) [guess]",Needs Info
+epic-report-execution-events-to-c2,ET-2959,Report Path-Execution Events to C2,observable-runtime-state,Must Have,Yes,"epic-execute-path-with-motion-limits (Embedded, soft) [guess]",Needs Info
+epic-require-los-ack-at-session-init,ET-2964,Require Line-of-Sight Acknowledgment at Session Init,tele-operation,Must Have,Yes,,Needs Info
+epic-validate-teleop-icd-at-session-init,ET-2954,Validate Tele-op ICD at Session Initiation,tele-operation,Should Have,Yes,"epic-gate-teleop-session-on-motion-auth (Embedded, soft) [guess]",Needs Info
+epic-validate-teleop-input-against-icd,ET-2955,Validate Tele-op Input Against Active ICD,tele-operation,Should Have,Yes,"epic-teleop-input-staleness-timeout (Embedded, soft) [guess]",Needs Info

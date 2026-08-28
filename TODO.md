@@ -263,7 +263,7 @@ for context and excluded from the referencing team's counts.
       GNC or Perception. The tracker is correctly scoped to VSP-Embedded; 87 is
       right, not short by 6.
 - [x] ~~Decide whether the committed snapshot should be a full-fidelity
-      export.~~ Decided 2026-08-18: keep it to the 7 generator columns. The other
+      export.~~ Decided 2026-08-18: keep it to the generator columns. The other
       9 are meeting scratch space (`Batch`, `2TS Rank`, `Story Titles`, `Owner`,
       ...) and this repo is public. `tools/export_snapshot.py` writes exactly
       those 7 from the live sheet.

@@ -40,7 +40,7 @@ release loop is manual but small:
 #    prak-electronics-epics    -> sheet 2558444740497284
 
 # 2. Prune the export into that team's snapshot. This overwrites the committed
-#    data/<team>/tracker-snapshot.csv with only the 7 generator columns, sorted
+#    data/<team>/tracker-snapshot.csv with only the generator columns, sorted
 #    by epic id, so no raw export (account ids, labor rates) ever reaches the
 #    public repo — and so an offline refresh produces the same bytes the live
 #    one would. Do NOT skip this and point the generator at the raw export:

@@ -80,6 +80,17 @@ JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
 COLS = ["Epic", "Jira Key", "Title", "Capability",
         "Baseline Priority", "2TS Required", "Blocking Epics"]
 
+# Read when present, tolerated when absent. Eval Status drives a visual
+# indicator only - never an edge, a count, or a grouping - so a tracker or a
+# hand export without the column still renders, just without the marker.
+# Keeping it out of COLS is what stops load_csv hard-failing on the example
+# snapshot and on any export predating the column.
+OPTIONAL_COLS = ["Eval Status"]
+ALL_COLS = COLS + OPTIONAL_COLS
+
+# The tracker value meaning "this row has been estimated in a meeting".
+ESTIMATED = "Estimated"
+
 PRIORITY_CLASS = {
     "Must Have": "must", "Should Have": "should",
     "Could Have": "could", "Will Not Have": "wont",
@@ -297,13 +308,18 @@ def load_live(sheet_id: int) -> list[dict]:
     id2title = {c["id"]: c["title"] for c in sheet["columns"]}
     records = []
     for row in sheet.get("rows", []):
-        rec = {t: "" for t in COLS}
+        rec = {t: "" for t in ALL_COLS}
         for cell in row.get("cells", []):
             title = id2title.get(cell.get("columnId"))
             if title in rec:
                 rec[title] = str(cell.get("value", "") or "")
         records.append(rec)
     return records
+
+
+def is_estimated(rec: dict) -> bool:
+    """True when the tracker marks this epic as estimated."""
+    return rec.get("Eval Status", "").strip().casefold() == ESTIMATED.casefold()
 
 
 def load_csv(path: str) -> list[dict]:
@@ -315,7 +331,8 @@ def load_csv(path: str) -> list[dict]:
             missing = [c for c in COLS if c not in rdr.fieldnames]
             if missing:
                 sys.exit(f"ERROR: {path} is missing columns: {', '.join(missing)}")
-            return [{t: (row.get(t, "") or "").strip() for t in COLS} for row in rdr]
+            return [{t: (row.get(t, "") or "").strip() for t in ALL_COLS}
+                    for row in rdr]
     except FileNotFoundError:
         sys.exit(f"ERROR: no such CSV: {path}")
     except OSError as exc:
@@ -530,7 +547,8 @@ CLASSDEFS = """  classDef must fill:#b42318,stroke:#7a0b02,color:#ffffff;
   classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
-  classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;"""
+  classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;
+  classDef estimated stroke:#12b76a;"""
 
 
 def is_external(epic: str) -> bool:
@@ -573,6 +591,13 @@ def component_mermaid(group: list[str],
                 lines.append(f'{indent}{nid}["{label}"]')
                 node_classes.append(
                     (nid, priority_class(rec) + ("_tts" if is_2ts(rec) else "")))
+            # A second class rather than a priority x 2TS x estimated matrix of
+            # classDefs: mermaid merges them, later properties winning, so this
+            # overrides stroke alone and leaves fill and stroke-width intact.
+            # External nodes are excluded - they belong to another team, so this
+            # team's evaluation state says nothing about them.
+            if not is_external(epic) and is_estimated(rec):
+                node_classes.append((nid, "estimated"))
         if wrap:
             lines.append("  end")
 
@@ -742,6 +767,8 @@ def render_cards(records: list[dict], meta: dict) -> str:
             priority = rec["Baseline Priority"].strip() or "unset"
             tts = rec["2TS Required"].strip() or "TBD"
             cls = priority_class(rec) + (" tts" if is_2ts(rec) else "")
+            if is_estimated(rec):
+                cls += " est"
             key_html = (f'<a class="key" href="{JIRA_BROWSE}{esc_html(jira)}" '
                         f'target="_blank" rel="noopener">{esc_html(jira)}</a>'
                         if jira else '<span class="key muted">no Jira key</span>')
@@ -750,7 +777,10 @@ def render_cards(records: list[dict], meta: dict) -> str:
                 f'      <h3>{esc_html(title)}</h3>\n'
                 f'      <div class="card-meta">{key_html}'
                 f'<span class="chip">{esc_html(priority)}</span>'
-                f'<span class="chip">2TS: {esc_html(tts)}</span></div>\n'
+                f'<span class="chip">2TS: {esc_html(tts)}</span>'
+                + ('<span class="chip est">estimated</span>'
+                   if is_estimated(rec) else '')
+                + '</div>\n'
                 f'      <code class="slug">{esc_html(epic)}</code>\n'
                 f'    </article>'
             )
@@ -846,6 +876,8 @@ HTML_TEMPLATE = r"""<!doctype html>
   .lg-should { background: var(--should-bg); border-color: var(--should-br); }
   .legend .lg-must { color: #fff; }
   .legend .lg-should { color: #111827; }
+  .legend .lg-est { background: #ffffff; color: #067647;
+                    box-shadow: inset 0 0 0 2px #12b76a; }
   .lg-could { background: var(--could-bg); border-color: var(--could-br); }
   .lg-wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .lg-tts { border: 3px solid var(--fg); font-weight: 600; }
@@ -951,6 +983,10 @@ HTML_TEMPLATE = r"""<!doctype html>
   .card.could { background: var(--could-bg); border-color: var(--could-br); }
   .card.wont { background: var(--wont-bg); border-color: var(--wont-br); }
   .card.tts { border-width: 3px; }
+  /* Estimated reads as an accent stripe, not a fill: the card background
+     already encodes MoSCoW priority and must stay readable. */
+  .card.est { box-shadow: inset 4px 0 0 0 #12b76a; }
+  .chip.est { background: #12b76a; color: #ffffff; font-weight: 600; }
   @media (prefers-color-scheme: dark) { .card { color: var(--fg); } }
   /* Must is solid red (white text); Should is solid amber (black text). Force
      both in either theme so the base/dark text colour never overrides them. */
@@ -985,6 +1021,7 @@ HTML_TEMPLATE = r"""<!doctype html>
     <span class="lg-must">Must</span><span class="lg-should">Should</span>
     <span class="lg-could">Could</span><span class="lg-wont">Won't</span>
     <span class="lg-tts">bold border = 2TS required</span>
+    <span class="lg-est">green outline = estimated</span>
     <span class="lg-ext">other tracker</span>
   </div>
   <div class="stats" style="margin-top:.4rem">
@@ -1287,6 +1324,7 @@ def build_html(records: list[dict], components: list[list[str]],
         "capability": capability_of(r),
         "priority": r["Baseline Priority"].strip(),
         "tts": r["2TS Required"].strip() or "TBD",
+        "eval": r.get("Eval Status", "").strip(),
     } for r in records]
 
     # Count only this team's epics, not the external nodes drawn for context -

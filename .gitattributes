@@ -1,0 +1,15 @@
+# Normalise line endings to LF in the repository, on every platform.
+#
+# Without this the tracker snapshots flip-flop forever: csv.writer emits CRLF
+# regardless of platform, Windows core.autocrlf=true rewrites it to LF on
+# commit, and the Linux CI runner does not - so a scheduled refresh and a local
+# refresh each "change" all 102 rows by rewriting the other's line endings.
+# With three scheduled runs a weekday that is three empty commits a day.
+* text=auto eol=lf
+
+# Binary: never touch these.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

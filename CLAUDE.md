@@ -57,7 +57,7 @@ resolves epic ids within a single sheet only.
 | `tools/build_dependency_dag.py` | Tracker -> Mermaid + drill-down viewer. Stdlib only. |
 | `tools/build_index.py` | Snapshots -> `index.html` landing/progress page. Stdlib only. |
 | `tools/teams.py` | The registry. Every per-team path below is derived from a slug here. |
-| `data/<slug>/tracker-snapshot.csv` | That team's snapshot - the 7 columns the generator reads |
+| `data/<slug>/tracker-snapshot.csv` | That team's snapshot - the 7 columns the generator reads, plus optional `Eval Status` |
 | `data/shared/capability-meta.json` | **Build product.** capreq slug -> `CAP-nn`, title, priority, Jira key. Regenerated from `prak-v-model`. |
 | `data/shared/capability-jira.json` | **Transitional.** Legacy hand-kept slug -> Jira key map; delete once every capreq carries `jira-key`. |
 | `data/example/tracker-snapshot.csv` | Same shape with sample edges, for the example render |
@@ -123,6 +123,14 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
   stderr - if you see that note, the capability labels may be stale.
 - Priorities are MoSCoW (`Must Have`/`Should Have`/`Could Have`/`Will Not Have`),
   pre-filled from the epic. Do not edit them in meetings.
+- **`Eval Status`** is optional and read for display only - never for an edge, a
+  count, or a grouping. `Estimated` draws a green outline on the graph node and a
+  green stripe plus chip on the inventory card. A tracker or hand export without
+  the column still renders, just without the marker, which is why it lives in
+  `OPTIONAL_COLS` rather than `COLS`.
+- The graph encodes three things at once, on three separate channels: **fill** is
+  MoSCoW priority, **border width** is 2TS required, **border colour** is
+  `Eval Status = Estimated`. Adding a fourth needs a new channel, not a reuse.
 
 ## The capability layer
 
