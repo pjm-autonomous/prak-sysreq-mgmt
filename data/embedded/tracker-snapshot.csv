@@ -8,7 +8,7 @@ epic-all-stop-interface,MCHTRNCS-222,All Stop Initialization and Start Interface
 epic-all-stop-readiness-on-comm,MCHTRNCS-223,All Stop Readiness Gated on External-Source Communication,remote-all-stop-safety-capability,Must Have,TBD,
 epic-api-versioning-and-training,MCHTRNCS-183,"API Versioning, Migration Guidance, and Integration Training",framework-packaging-extension-and-integration,Should Have,TBD,
 epic-auto-enqueue-on-event,MCHTRNCS-278,Auto-Enqueue Off-load on Event of Interest,blackbox-data-off-load-to-cloud,Should Have,TBD,
-epic-cancel-command-response,MCHTRNCS-271,Cancel Command Response,path-execution-and-objectives-translation,Must Have,Yes,Unknown
+epic-cancel-command-response,MCHTRNCS-271,Cancel Command Response,path-execution-and-objectives-translation,Must Have,Yes,
 epic-cat1-stop-when-no-remote-stop-source,MCHTRNCS-224,Cat1 Stop When No Remote Stop Source,remote-all-stop-safety-capability,Should Have,TBD,
 epic-clean-up-staged-copies,MCHTRNCS-279,Clean Up Staged Copies on Transfer and Finalize,blackbox-data-off-load-to-cloud,Should Have,TBD,
 epic-comm-loss-log,MCHTRNCS-225,Communication Loss Log,remote-all-stop-safety-capability,Should Have,TBD,
@@ -66,7 +66,7 @@ epic-stop-command-processing-100ms,MCHTRNCS-231,Stop Command Processing Within 1
 epic-stop-event-root-cause,MCHTRNCS-233,Stop Event Root-Cause Distinction,remote-all-stop-safety-capability,Should Have,TBD,
 epic-stop-on-execution-fault,MCHTRNCS-205,Stop on Execution Fault or Obstacle,path-execution-and-objectives-translation,Must Have,Yes,
 epic-stop-on-heading-overshoot,MCHTRNCS-206,Stop on Heading Overshoot During Turn-In-Place,path-execution-and-objectives-translation,Must Have,Yes,
-epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation,path-execution-and-objectives-translation,Must Have,Yes,Unknown
+epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation,path-execution-and-objectives-translation,Must Have,Yes,
 epic-structured-map-conformance,MCHTRNCS-197,Conform to Structured-Map Rules During Execution,path-execution-and-objectives-translation,Should Have,TBD,
 epic-subscribe-all-stop-broadcaster,MCHTRNCS-234,Subscribe to All Stop Broadcaster,remote-all-stop-safety-capability,Must Have,TBD,
 epic-support-acumen-vehicles,MCHTRNCS-240,Support Acumen Vehicles,vehicle-kinematics-support,Should Have,TBD,

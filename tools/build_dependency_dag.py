@@ -64,6 +64,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -228,22 +229,70 @@ def merge_capability_jira(meta: dict, path: str) -> dict:
 # --------------------------------------------------------------------------- #
 # Data loading
 # --------------------------------------------------------------------------- #
+# Statuses worth a second attempt. 429 and 5xx are the textbook transients.
+# 403 is here on evidence, not principle: on 2026-08-27, immediately after a
+# Smartsheet account reconfiguration, a sheet returned 403 errorCode 4003
+# "Access Denied" once and then served the same request twice in a row. A real
+# permission failure still fails - just a few seconds later, having said so on
+# stderr each time - and the scheduled refresh is worth more than that delay.
+RETRY_STATUS = frozenset({403, 429, 500, 502, 503, 504})
+RETRY_ATTEMPTS = 4
+RETRY_BACKOFF = 2.0          # seconds, doubled after each failed attempt
+
+
+def smartsheet_get(path: str, token: str, timeout: int = 60) -> dict:
+    """GET one Smartsheet API path, retrying transient failures.
+
+    Without this a single blip fails the whole scheduled refresh: every caller
+    exits non-zero, so one flaky response takes down a job that had nothing
+    wrong with it. Bounded and noisy on purpose - it retries a handful of times,
+    says so on stderr, and then gives up rather than hanging a CI run.
+    """
+    req = urllib.request.Request(
+        f"https://api.smartsheet.com/2.0/{path}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    delay = RETRY_BACKOFF
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        last = ""
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRY_STATUS:
+                sys.exit(f"ERROR: Smartsheet API returned {exc.code} "
+                         f"{exc.reason}. Check SMARTSHEET_ACCESS_TOKEN and "
+                         "--sheet-id.")
+            last = f"{exc.code} {exc.reason}"
+            # Smartsheet sends Retry-After on rate limits; honour it over our
+            # own backoff so we do not hammer a server that just told us to wait.
+            header = exc.headers.get("Retry-After") if exc.headers else None
+            if header:
+                try:
+                    delay = max(delay, float(header))
+                except ValueError:
+                    pass
+        except urllib.error.URLError as exc:
+            last = str(exc.reason)
+        except TimeoutError:
+            last = "timed out"
+
+        if attempt == RETRY_ATTEMPTS:
+            sys.exit(f"ERROR: Smartsheet API failed {RETRY_ATTEMPTS} times "
+                     f"({last}). Check SMARTSHEET_ACCESS_TOKEN, --sheet-id, and "
+                     "whether the sheet is still shared with that account.")
+        print(f"note: Smartsheet API {last} on attempt {attempt}/"
+              f"{RETRY_ATTEMPTS}; retrying in {delay:.0f}s", file=sys.stderr)
+        time.sleep(delay)
+        delay *= 2
+    raise AssertionError("unreachable")            # pragma: no cover
+
+
 def load_live(sheet_id: int) -> list[dict]:
     token = os.environ.get("SMARTSHEET_ACCESS_TOKEN")
     if not token:
         sys.exit("ERROR: --live needs SMARTSHEET_ACCESS_TOKEN in the environment.")
-    req = urllib.request.Request(
-        f"https://api.smartsheet.com/2.0/sheets/{sheet_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            sheet = json.load(resp)
-    except urllib.error.HTTPError as exc:
-        sys.exit(f"ERROR: Smartsheet API returned {exc.code} {exc.reason}. "
-                 "Check SMARTSHEET_ACCESS_TOKEN and --sheet-id.")
-    except urllib.error.URLError as exc:
-        sys.exit(f"ERROR: could not reach the Smartsheet API: {exc.reason}")
+    sheet = smartsheet_get(f"sheets/{sheet_id}", token)
 
     id2title = {c["id"]: c["title"] for c in sheet["columns"]}
     records = []

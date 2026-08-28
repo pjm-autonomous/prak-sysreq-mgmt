@@ -259,7 +259,8 @@ bundle and the CDN are both out of reach.
 
 ## Automated refresh
 
-`.github/workflows/refresh-dag.yml` runs 07:00 UTC on weekdays, and on demand
+`.github/workflows/refresh-dag.yml` runs three times each weekday (07:00 /
+12:00 / 17:00 Mountain), and on demand
 from the Actions tab. For **both** teams it refreshes the snapshot from the live
 sheet, rebuilds the DAG, then rebuilds the landing page, and commits only if
 something changed.

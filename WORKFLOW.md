@@ -106,7 +106,8 @@ site reads committed snapshots, not the live sheet. After any tracker change:
    <https://pjm-autonomous.github.io/prak-sysreq-mgmt/>.
 
 A hands-off scheduled refresh is already wired up: `.github/workflows/refresh-dag.yml`
-is committed and runs weekdays at 07:00 UTC, committing any change it finds. The one
+is committed and runs three times each weekday - 07:00, 12:00 and 17:00
+Mountain - committing any change it finds. The one
 thing still outstanding is the `SMARTSHEET_ACCESS_TOKEN` repo secret — without it the
 run skips the tracker pull, says so in a job summary, and rebuilds from the committed
 snapshots. So the DAGs stay current with the capability layer, but the progress numbers
@@ -135,7 +136,8 @@ access at all, and the scoping is enforced where it is enforceable.
 > **Never hand-edit `data/<slug>/tracker-snapshot.csv`.** For a team with a live
 > tracker the scheduled job runs `export_snapshot.py` over every entry with
 > `refresh: True` and overwrites that file. A hand-edit — emailed CSV or merged
-> PR alike — survives until the next weekday 07:00 UTC and then disappears. The
+> PR alike — survives until the next scheduled run, at most a few hours, and
+> then disappears. The
 > PR route is the more dangerous of the two because it leaves a paper trail
 > saying the change was reviewed and accepted, while the published page silently
 > reverts.

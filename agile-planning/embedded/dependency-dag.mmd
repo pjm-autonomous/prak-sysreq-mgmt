@@ -10,36 +10,6 @@ flowchart TB
   classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
   classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
   classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;
-  subgraph sg_other_tracker["other tracker"]
-    direction TB
-    n_external_Unknown[/"Unknown<br/><small>other tracker</small>"/]
-  end
-  subgraph sg_path_execution_and_objectives_translation["path-execution-and-objectives-translation"]
-    direction TB
-    n_epic_cancel_command_response["Cancel Command Response<br/><small>MCHTRNCS-271</small>"]
-    n_epic_stop_on_path_deviation["Stop on Path Deviation<br/><small>MCHTRNCS-207</small>"]
-  end
-  n_external_Unknown --> n_epic_cancel_command_response
-  n_external_Unknown --> n_epic_stop_on_path_deviation
-  click n_epic_cancel_command_response "https://asirobots.atlassian.net/browse/MCHTRNCS-271" _blank
-  click n_epic_stop_on_path_deviation "https://asirobots.atlassian.net/browse/MCHTRNCS-207" _blank
-  class n_external_Unknown external;
-  class n_epic_cancel_command_response must_tts;
-  class n_epic_stop_on_path_deviation must_tts;
-
-
-%% chain 2
-flowchart TB
-  classDef must fill:#b42318,stroke:#7a0b02,color:#ffffff;
-  classDef should fill:#ffbf00,stroke:#8a6d00,color:#111827;
-  classDef could fill:#e6f0fd,stroke:#175cd3,color:#111827;
-  classDef wont fill:#eceef2,stroke:#667085,color:#111827;
-  classDef must_tts fill:#b42318,stroke:#7a0b02,stroke-width:4px,color:#ffffff;
-  classDef should_tts fill:#ffbf00,stroke:#8a6d00,stroke-width:4px,color:#111827;
-  classDef could_tts fill:#e6f0fd,stroke:#0b3a8f,stroke-width:4px,color:#111827;
-  classDef wont_tts fill:#eceef2,stroke:#344054,stroke-width:4px,color:#111827;
-  classDef note fill:#f8fafc,stroke:#94a3b8,color:#334155;
-  classDef external fill:#f8fafc,stroke:#667085,stroke-dasharray:5 3,color:#344054;
   subgraph sg_motion_authorization["motion-authorization"]
     direction TB
     n_epic_continuous_geofence_enforcement["Continuous Geofence<br/>Enforcement<br/><small>MCHTRNCS-269</small>"]

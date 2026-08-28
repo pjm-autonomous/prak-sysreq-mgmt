@@ -64,7 +64,7 @@ Once the API token exists, steps 1–2 collapse into a single
 `python3 tools/export_snapshot.py --team <x>` — same command, `--live` instead of
 `--from-csv` — and steps 3–4 are unchanged.
 `.github/workflows/refresh-dag.yml` is committed and already runs the whole
-thing weekdays at 07:00 UTC. Without the `SMARTSHEET_ACCESS_TOKEN` repo secret it
+thing three times each weekday, at 07:00 / 12:00 / 17:00 Mountain. Without the `SMARTSHEET_ACCESS_TOKEN` repo secret it
 skips only the tracker pull — it still rebuilds from the committed snapshots,
 posts a "Tracker pull skipped" job summary, and marks any commit as a capability
 rebuild rather than a tracker refresh. That secret is a Smartsheet **personal API

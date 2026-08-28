@@ -33,7 +33,8 @@ Published: https://pjm-autonomous.github.io/prak-sysreq-mgmt/ (rebuilds on push)
 3. If IT ticket #help00004986 has landed, mint the Smartsheet personal API
    token, set `SMARTSHEET_ACCESS_TOKEN` locally for `--live`, and add it as a
    repo secret so `.github/workflows/refresh-dag.yml` (already committed, cron
-   07:00 UTC weekdays) stops failing on its token check.
+   three times each weekday, 07:00 / 12:00 / 17:00 Mountain) stops failing on
+   its token check.
 
 ## Fixed 2026-08-26: the offline refresh never wrote a snapshot
 
@@ -233,8 +234,9 @@ for context and excluded from the referencing team's counts.
 - [ ] Populate `Blocking Epics` in the tracker during the evaluation meetings.
       Until then the real DAG renders 0 edges across all 87 epics.
 - [x] ~~Commit the scheduled refresh workflow.~~ Done:
-      `.github/workflows/refresh-dag.yml` is tracked and runs weekdays at 07:00
-      UTC, looping over `python3 tools/teams.py --refreshable`.
+      `.github/workflows/refresh-dag.yml` is tracked and runs three times each
+      weekday (07:00 / 12:00 / 17:00 Mountain), looping over
+      `python3 tools/teams.py --refreshable`.
 - [ ] Add the `SMARTSHEET_ACCESS_TOKEN` repo secret. This is a Smartsheet
       **personal API token**, not the Claude Connector — the runner is headless
       and calls the REST API directly, so the connector cannot stand in for it.

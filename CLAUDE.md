@@ -96,8 +96,8 @@ Without a token, `--team <x>` alone builds offline from that team's committed
 snapshot. `python3 tools/teams.py` prints the registry; `--teams`,
 `--refreshable`, and `--all` print bare slugs for loops like the ones above.
 
-`.github/workflows/refresh-dag.yml` runs the same two loops on a schedule and
-commits any change.
+`.github/workflows/refresh-dag.yml` runs the same two loops three times each
+weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
 
 ## Conventions that are easy to get wrong
 

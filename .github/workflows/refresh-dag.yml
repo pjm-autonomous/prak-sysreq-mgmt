@@ -5,8 +5,21 @@ name: Refresh dependency DAGs
 # generators by hand. Teams come from tools/teams.py.
 on:
   schedule:
-    # 07:00 UTC on weekdays - after a meeting day, before the next morning.
-    - cron: "0 7 * * 1-5"
+    # 07:00 / 12:00 / 17:00 Mountain, weekdays: before the day starts, over
+    # lunch, and after the afternoon review meetings.
+    #
+    # GitHub cron is UTC-only and has no DST, so these are pinned to MDT
+    # (UTC-6) - what Logan is on from mid-March to early November. Through the
+    # MST months each run lands an hour earlier in local terms (06:00 / 11:00 /
+    # 16:00). For a DAG refresh that drift is immaterial; shift all three by an
+    # hour twice a year if it ever matters.
+    #
+    # Pinning to MDT rather than MST also keeps the last run on the same UTC
+    # day as the local one: at UTC-7 the 17:00 slot would be 00:00 the next
+    # day, so "1-5" would silently skip Friday evening and add Sunday evening.
+    - cron: "0 13 * * 1-5"      # 07:00 MDT / 06:00 MST
+    - cron: "0 18 * * 1-5"      # 12:00 MDT / 11:00 MST
+    - cron: "0 23 * * 1-5"      # 17:00 MDT / 16:00 MST
   workflow_dispatch:
 
 permissions:
