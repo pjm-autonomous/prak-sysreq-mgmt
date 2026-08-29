@@ -201,6 +201,48 @@ def check_structure(sheet: dict, schema: dict, sheet_name: str,
             report.warn(f"column {col!r} has no formula; schema expects {formula}")
 
 
+def validate_source(label: str, rows: list[dict], vmodel: str,
+                    sheet: dict | None, cross: list[dict]) -> Report:
+    """Validate rows from anywhere: a registered team, a CSV, or a raw sheet."""
+    report = Report(label)
+    schema = load_schema()
+    rows = [r for r in rows if r.get("Epic", "").strip()]
+    meta = load_capability_meta(vmodel, team_registry.abspath(
+        team_registry.CAPABILITY_META))
+    known = {r["Epic"].strip() for r in rows}
+    elsewhere = {}
+    for other in cross:
+        for row in load_csv(team_registry.abspath(other["snapshot"])):
+            eid = row.get("Epic", "").strip()
+            if eid:
+                elsewhere[eid] = other["name"]
+    check_rows(rows, schema, meta, report, known, elsewhere)
+    if sheet is not None:
+        check_structure(sheet, schema, sheet["name"], report)
+    return report
+
+
+def validate_adhoc(sheet_id: int | None, csv_path: str | None,
+                   vmodel: str) -> Report:
+    """A sheet or CSV that is not (yet) a registered team."""
+    token = os.environ.get("SMARTSHEET_ACCESS_TOKEN")
+    sheet = None
+    if sheet_id:
+        if not token:
+            sys.exit("ERROR: --sheet-id needs SMARTSHEET_ACCESS_TOKEN.")
+        sheet = smartsheet_get(f"sheets/{sheet_id}", token)
+        rows = load_live(sheet_id)
+        label = f"sheet {sheet_id} ({sheet['name']})"
+    else:
+        rows = load_csv(csv_path)
+        label = csv_path
+    # Resolve blockers against every onboarded tracker, so a candidate sheet's
+    # cross-team references are recognised rather than reported as faults.
+    cross = [team_registry.team(s) for s in team_registry.ORDER
+             if team_registry.has_snapshot(team_registry.team(s))]
+    return validate_source(label, rows, vmodel, sheet, cross)
+
+
 def validate(slug: str, live: bool, vmodel: str) -> Report:
     cfg = team_registry.team(slug)
     report = Report(f"{slug} ({cfg['name']})")
@@ -242,6 +284,11 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--team", choices=team_registry.ORDER,
                     help="one team (default: every onboarded team)")
+    ap.add_argument("--sheet-id", type=int,
+                    help="validate an arbitrary Smartsheet, registered or not - "
+                         "use before adopting a sheet or onboarding a team")
+    ap.add_argument("--csv", metavar="PATH",
+                    help="validate an arbitrary snapshot or export")
     ap.add_argument("--live", action="store_true",
                     help="also check the sheet's structure over the API")
     ap.add_argument("--vmodel", default=os.path.normpath(
@@ -249,6 +296,14 @@ def main() -> None:
     ap.add_argument("--strict", action="store_true",
                     help="exit non-zero on warnings as well as errors")
     args = ap.parse_args()
+
+    if args.sheet_id or args.csv:
+        report = validate_adhoc(args.sheet_id, args.csv, args.vmodel)
+        print(report.render())
+        print(f"\n{len(report.errors)} error(s), {len(report.warnings)} warning(s)")
+        if report.errors or (args.strict and report.warnings):
+            sys.exit(1)
+        return
 
     slugs = [args.team] if args.team else [
         s for s in team_registry.ORDER
