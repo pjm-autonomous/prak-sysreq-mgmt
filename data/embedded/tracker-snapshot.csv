@@ -1,17 +1,17 @@
 Epic,Jira Key,Title,Capability,Baseline Priority,2TS Required,Blocking Issues,Eval Status
 epic-accept-manual-request,MCHTRNCS-277,Accept Manual Off-load Request,blackbox-data-off-load-to-cloud,Could Have,TBD,,Not Started
-epic-active-stop-mode-query,MCHTRNCS-219,Active Stop Mode Query Interface,remote-all-stop-safety-capability,Should Have,No,,Not Started
-epic-all-stop-continuous-monitor,MCHTRNCS-220,All Stop Continuous Communication Monitor,remote-all-stop-safety-capability,Must Have,Yes,,Not Started
-epic-all-stop-failed-event-fault-log,MCHTRNCS-226,Fault Log on Failed All Stop Event Publish,remote-all-stop-safety-capability,Must Have,No,,Not Started
+epic-active-stop-mode-query,MCHTRNCS-219,Active Stop Mode Query Interface,remote-all-stop-safety-capability,Should Have,No,,Estimated
+epic-all-stop-continuous-monitor,MCHTRNCS-220,All Stop Continuous Communication Monitor,remote-all-stop-safety-capability,Must Have,Yes,,Estimated
+epic-all-stop-failed-event-fault-log,MCHTRNCS-226,Fault Log on Failed All Stop Event Publish,remote-all-stop-safety-capability,Must Have,No,,Estimated
 epic-all-stop-in-every-build,MCHTRNCS-221,All Stop Included in Every Build,remote-all-stop-safety-capability,Must Have,No,,Needs Info
-epic-all-stop-interface,MCHTRNCS-222,All Stop Initialization and Start Interface,remote-all-stop-safety-capability,Should Have,Yes,,Not Started
-epic-all-stop-readiness-on-comm,MCHTRNCS-223,All Stop Readiness Gated on External-Source Communication,remote-all-stop-safety-capability,Must Have,No,,Not Started
+epic-all-stop-interface,MCHTRNCS-222,All Stop Initialization and Start Interface,remote-all-stop-safety-capability,Should Have,Yes,,Estimated
+epic-all-stop-readiness-on-comm,MCHTRNCS-223,All Stop Readiness Gated on External-Source Communication,remote-all-stop-safety-capability,Must Have,No,,Estimated
 epic-api-versioning-and-training,MCHTRNCS-183,"API Versioning, Migration Guidance, and Integration Training",framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
 epic-auto-enqueue-on-event,MCHTRNCS-278,Auto-Enqueue Off-load on Event of Interest,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
-epic-cancel-command-response,MCHTRNCS-271,Cancel Command Response,path-execution-and-objectives-translation,Must Have,Yes,,Needs Info
-epic-cat1-stop-when-no-remote-stop-source,MCHTRNCS-224,Cat1 Stop When No Remote Stop Source,remote-all-stop-safety-capability,Should Have,No,,Not Started
+epic-cancel-command-response,MCHTRNCS-271,Cancel Command Response,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
+epic-cat1-stop-when-no-remote-stop-source,MCHTRNCS-224,Cat1 Stop When No Remote Stop Source,remote-all-stop-safety-capability,Should Have,No,,Estimated
 epic-clean-up-staged-copies,MCHTRNCS-279,Clean Up Staged Copies on Transfer and Finalize,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
-epic-comm-loss-log,MCHTRNCS-225,Communication Loss Log,remote-all-stop-safety-capability,Should Have,No,,Not Started
+epic-comm-loss-log,MCHTRNCS-225,Communication Loss Log,remote-all-stop-safety-capability,Should Have,No,,Estimated
 epic-configurable-kinematic-and-io-interfaces,MCHTRNCS-217,Configurable Kinematic Model and Actuator/Sensor Interfaces,framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
 epic-confirm-estop-clear,MCHTRNCS-134,Confirm E-Stop State Clear,motion-authorization,Must Have,Yes,,Estimated
 epic-confirm-stop-capability,MCHTRNCS-139,Confirm Stop-Capability Operational,motion-authorization,Must Have,Yes,,Estimated
@@ -28,29 +28,29 @@ epic-emit-dataset-metadata,MCHTRNCS-282,Emit Data-Set Placement and Metadata Des
 epic-emit-obstacle-stop-avoidance,MCHTRNCS-200,Emit Obstacle Stop or Avoidance Actuation,obstacle-detection-and-avoidance,Must Have,Yes,ODOA-5527,Estimated
 epic-evaluate-per-dataset-gates,MCHTRNCS-283,Evaluate Per-Data-Set Gate Policy,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-evaluate-vehicle-state-conditions,MCHTRNCS-195,Evaluate Vehicle-State Safe-to-Move Conditions,motion-authorization,Must Have,Yes,,Estimated
-epic-execute-path-with-motion-limits,MCHTRNCS-202,Execute Path Within Motion Limits,path-execution-and-objectives-translation,Should Have,Yes,,Needs Info
+epic-execute-path-with-motion-limits,MCHTRNCS-202,Execute Path Within Motion Limits,path-execution-and-objectives-translation,Should Have,Yes,,Estimated
 epic-extract-to-media,MCHTRNCS-284,Extract Prepared Data Set to Physical Media,blackbox-data-off-load-to-cloud,Could Have,TBD,,Not Started
 epic-finalize-completion-state,MCHTRNCS-285,Finalize Data-Set Completion State,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-framework-verification-support,MCHTRNCS-184,Framework Verification Support,framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
-epic-gate-continuous-motion-authorization,MCHTRNCS-141,Continuously Gate Motion Authorization,motion-authorization,Must Have,Yes,,Needs Info
+epic-gate-continuous-motion-authorization,MCHTRNCS-141,Continuously Gate Motion Authorization,motion-authorization,Must Have,Yes,,Estimated
 epic-gate-teleop-session-on-motion-auth,MCHTRNCS-210,Gate Tele-op Session on Motion Authorization,tele-operation,Should Have,Yes,,Estimated
 epic-gather-selected-windows,MCHTRNCS-286,Gather Only Selected Windows,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
-epic-geofence-map-validation,MCHTRNCS-270,Geofence Map Validation,motion-authorization,Must Have,Yes,,Needs Info
-epic-immediate-stop-on-stop-command,MCHTRNCS-276,Immediate Stop on Stop Command,remote-all-stop-safety-capability,Must Have,Yes,,Not Started
+epic-geofence-map-validation,MCHTRNCS-270,Geofence Map Validation,motion-authorization,Must Have,Yes,,Estimated
+epic-immediate-stop-on-stop-command,MCHTRNCS-276,Immediate Stop on Stop Command,remote-all-stop-safety-capability,Must Have,Yes,,Estimated
 epic-ingest-placement-and-enable,MCHTRNCS-287,"Ingest Placement, Address, and Enable from C2",blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-integrable-framework-for-oem-vehicle-platforms,MCHTRNCS-300,Integrable Framework for OEM Vehicle Platforms,framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
 epic-merge-time-synchronized,MCHTRNCS-288,Merge into a Time-Synchronized Self-Contained Set,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
-epic-no-comm-loss-during-startup,MCHTRNCS-227,No Communication-Loss Declaration During Startup,remote-all-stop-safety-capability,Should Have,Yes,,Not Started
+epic-no-comm-loss-during-startup,MCHTRNCS-227,No Communication-Loss Declaration During Startup,remote-all-stop-safety-capability,Should Have,Yes,,Estimated
 epic-objective-progress-updates,MCHTRNCS-272,Objective Progress Updates,path-execution-and-objectives-translation,Should Have,No,,Estimated
 epic-objectives-reception,MCHTRNCS-273,Objectives Reception,path-execution-and-objectives-translation,Should Have,TBD,,Not Started
-epic-one-active-stop-mode,MCHTRNCS-230,Single Active Stop Mode,remote-all-stop-safety-capability,Should Have,No,,Needs Info
+epic-one-active-stop-mode,MCHTRNCS-230,Single Active Stop Mode,remote-all-stop-safety-capability,Should Have,No,,Estimated
 epic-preserve-serialization,MCHTRNCS-289,Preserve Serialization and Native Formats,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-priority-ordering,MCHTRNCS-290,Priority Ordering of Off-load and Eviction,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-prohibited-transition-guard,MCHTRNCS-203,Guard Against Prohibited Motion Transitions,motion-authorization,Must Have,Yes,,Estimated
 epic-provide-gate-criteria,MCHTRNCS-291,Provide Readiness Gate Criteria,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-publish-framework-distribution-forms,MCHTRNCS-218,Publish Framework Distribution Forms and Interface Contracts,framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
-epic-reject-all-stop-init-when-remote-stop,MCHTRNCS-228,Reject All Stop Initialization When Remote Stop Active,remote-all-stop-safety-capability,Must Have,No,,Not Started
-epic-reject-remote-stop-init-when-all-stop,MCHTRNCS-229,Reject Remote Stop Initialization When All Stop Active,remote-all-stop-safety-capability,Must Have,No,,Not Started
+epic-reject-all-stop-init-when-remote-stop,MCHTRNCS-228,Reject All Stop Initialization When Remote Stop Active,remote-all-stop-safety-capability,Must Have,No,,Estimated
+epic-reject-remote-stop-init-when-all-stop,MCHTRNCS-229,Reject Remote Stop Initialization When All Stop Active,remote-all-stop-safety-capability,Must Have,No,,Estimated
 epic-release-queue-after-staging,MCHTRNCS-292,Release Queued State Once Staged,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-report-offload-state,MCHTRNCS-293,Report Off-load State via Diagnostics,blackbox-data-off-load-to-cloud,Could Have,TBD,,Not Started
 epic-report-supported-objectives,MCHTRNCS-274,Report Supported Objectives,path-execution-and-objectives-translation,Should Have,TBD,,Not Started
@@ -62,13 +62,13 @@ epic-sequential-objective-execution,MCHTRNCS-275,Sequential Objective Execution,
 epic-skip-queued-in-fifo,MCHTRNCS-296,Skip Queued Files in FIFO Eviction,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-stage-prepared-dataset,MCHTRNCS-297,Stage Prepared Data Set for Transfer,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-stop-command-on-all-stop-100ms,MCHTRNCS-232,Stop Command Within 100 ms on All Stop or Comm Loss,remote-all-stop-safety-capability,Must Have,TBD,,Not Started
-epic-stop-command-processing-100ms,MCHTRNCS-231,Stop Command Processing Within 100 ms,remote-all-stop-safety-capability,Must Have,Yes,,Not Started
+epic-stop-command-processing-100ms,MCHTRNCS-231,Stop Command Processing Within 100 ms,remote-all-stop-safety-capability,Must Have,Yes,,Estimated
 epic-stop-event-root-cause,MCHTRNCS-233,Stop Event Root-Cause Distinction,remote-all-stop-safety-capability,Should Have,Yes,,Estimated
 epic-stop-on-execution-fault,MCHTRNCS-205,Stop on Execution Fault or Obstacle,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
 epic-stop-on-heading-overshoot,MCHTRNCS-206,Stop on Heading Overshoot During Turn-In-Place,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
-epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation,path-execution-and-objectives-translation,Must Have,Yes,,Needs Info
-epic-structured-map-conformance,MCHTRNCS-197,Conform to Structured-Map Rules During Execution,path-execution-and-objectives-translation,Should Have,Yes,,Needs Info
-epic-subscribe-all-stop-broadcaster,MCHTRNCS-234,Subscribe to All Stop Broadcaster,remote-all-stop-safety-capability,Must Have,Yes,,Not Started
+epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
+epic-structured-map-conformance,MCHTRNCS-197,Conform to Structured-Map Rules During Execution,path-execution-and-objectives-translation,Should Have,Yes,,Estimated
+epic-subscribe-all-stop-broadcaster,MCHTRNCS-234,Subscribe to All Stop Broadcaster,remote-all-stop-safety-capability,Must Have,Yes,,Estimated
 epic-support-acumen-vehicles,MCHTRNCS-240,Support Acumen Vehicles,vehicle-kinematics-support,Should Have,TBD,,Not Started
 epic-support-articulated-vehicles,MCHTRNCS-241,Support Articulated Vehicles,vehicle-kinematics-support,Should Have,TBD,,Not Started
 epic-support-differential-drive-vehicles,MCHTRNCS-242,Support Differential-Drive Vehicles,vehicle-kinematics-support,Should Have,TBD,,Not Started
@@ -78,11 +78,11 @@ epic-tele-op-exclusive-control,MCHTRNCS-304,Tele-op Exclusive Control,tele-opera
 epic-tele-op-full-operator-control,MCHTRNCS-305,Tele-op Full Operator Control,tele-operation,Should Have,Yes,,Estimated
 epic-teleop-connection-loss-safe-behavior,MCHTRNCS-212,Tele-op Connection-Loss Safe Behavior,tele-operation,Must Have,Yes,,Estimated
 epic-teleop-input-staleness-timeout,MCHTRNCS-213,Tele-op Input Staleness Timeout,tele-operation,Should Have,Yes,,Needs Info
-epic-teleop-link-loss-integrator-notification,MCHTRNCS-306,Tele-op Link-Loss Integrator Notification,tele-operation,Should Have,Yes,,Needs Info
+epic-teleop-link-loss-integrator-notification,MCHTRNCS-306,Tele-op Link-Loss Integrator Notification,tele-operation,Should Have,Yes,,Estimated
 epic-teleop-motion-limit-conformance,MCHTRNCS-214,Tele-op Motion-Limit and Geofence Conformance,tele-operation,Must Have,Yes,,Estimated
 epic-teleop-network-timeout-estop,MCHTRNCS-215,Tele-op Network-Timeout Emergency Stop,tele-operation,Must Have,Yes,,Estimated
 epic-translate-teleop-input-to-actuation,MCHTRNCS-216,Translate Tele-op Input to Actuation,tele-operation,Should Have,Yes,,Estimated
 epic-turn-in-place-heading-accuracy,MCHTRNCS-208,Turn-In-Place Heading Accuracy,path-execution-and-objectives-translation,Should Have,TBD,,Not Started
 epic-validate-supplied-path,MCHTRNCS-209,Validate Supplied Path Before Execution,path-execution-and-objectives-translation,Should Have,TBD,,Not Started
 epic-verify-file-integrity,MCHTRNCS-298,Verify Per-File Transfer Integrity,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
-epic-withhold-motion-until-recovery-authorized,MCHTRNCS-130,Withhold Motion Until Authorized Recovery,motion-authorization,Must Have,Yes,,Needs Info
+epic-withhold-motion-until-recovery-authorized,MCHTRNCS-130,Withhold Motion Until Authorized Recovery,motion-authorization,Must Have,Yes,,Estimated
