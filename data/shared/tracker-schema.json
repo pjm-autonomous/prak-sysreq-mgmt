@@ -60,8 +60,15 @@
   "optional": {
     "Eval Status": {
       "type": "PICKLIST",
-      "options": ["Not Started", "Estimated", "Needs Info"],
-      "note": "Display only - drives the estimated indicator, never an edge or a count."
+      "options": ["Not Started", "Needs Info", "Estimated", "Stories Created"],
+      "note": [
+        "Display only - drives the estimated indicator, never an edge or a count.",
+        "Roughly ordered by progress. 'Stories Created' came from the Embedded",
+        "tracker adopted 2026-08-28 and is the state after Estimated, once the",
+        "stories exist in Jira. Only 'Estimated' currently draws the indicator;",
+        "whether 'Stories Created' should also mark a node is an open question -",
+        "it is strictly further along, so arguably yes."
+      ]
     },
     "Confidence": {
       "type": "PICKLIST",
