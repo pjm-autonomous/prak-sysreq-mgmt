@@ -13,6 +13,34 @@ edit your Smartsheet tracker, or fork and open a PR — depends on what you are
 changing: see [Who changes what](WORKFLOW.md#who-changes-what-access-model).
 Do not hand-edit a tracker snapshot; the scheduled refresh overwrites it.
 
+## Project status
+
+**In progress — tooling complete, decomposition ongoing.** Last updated 2026-08-31.
+
+| | State |
+|---|---|
+| Live teams | Embedded-Core (87 epics), Electronics (15) — 62 evaluated, 11 with dependencies |
+| Registered, not onboarded | ODOA, GNC, Mobius — containers only |
+| Published site | <https://pjm-autonomous.github.io/prak-sysreq-mgmt/>, rebuilt on push |
+| Scheduled refresh | Three times each weekday, 07:00 / 12:00 / 17:00 Mountain |
+| Credentials | `SMARTSHEET_ACCESS_TOKEN` and `VMODEL_READ_TOKEN` both set — see [CREDENTIALS.md](CREDENTIALS.md) |
+
+The Embedded tracker of record is the sheet **David Hayes owns**
+(`7348278000570244`). It is hierarchical — 187 story rows indented under 46 of
+its 87 epics — and the generators read epics only. Electronics is flat. The
+previous Embedded sheet is archived as `archived-prak-embedded-core-epics` and
+becomes the basis for the simplified template ODOA, GNC and Mobius onboard from.
+
+We hold **Editor** on the Embedded tracker, not Admin: cell values are writable,
+column structure is not. Two changes are pending with its owner — the
+`Epic Total (days)` column formula and the `Blocking Epics` → `Blocking Issues`
+rename. Neither blocks the build.
+
+Tooling added this cycle: `tools/validate_tracker.py` (checks a tracker, or any
+sheet, against `data/shared/tracker-schema.json`), a cross-team dependency table
+and change digest on the landing page, and `/refresh` as an issue comment for
+SEs without repo write.
+
 ## Embedded-Core Epic Dependency DAG
 
 A dependency graph of the 87 Embedded-Core (VSP-Embedded) PRAK epics, generated

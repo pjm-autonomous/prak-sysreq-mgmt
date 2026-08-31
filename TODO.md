@@ -1,6 +1,6 @@
 # TODO
 
-prak-sysreq-mgmt **In-Progress: tooling complete, decomposition not started**
+prak-sysreq-mgmt **In-Progress: tooling complete, decomposition ~60% evaluated**
 
 Owner: Patrick McKee, serving as SE for VSP-Embedded and Electronics.
 Last updated 2026-08-31.
@@ -28,6 +28,23 @@ the template ODOA, GNC and Mobius will onboard from.
 | Jira project | `MCHTRNCS` | `ET` | `ODOA` | `GNC` | `MP` |
 
 Published: https://pjm-autonomous.github.io/prak-sysreq-mgmt/ (rebuilds on push).
+
+### Changed 2026-08-31
+
+- Embedded repointed to David Hayes' sheet; the team maintains one tracker, not
+  two. Structurally output-neutral — the mermaid graph was byte-identical.
+- Story rows excluded from the epic set structurally (`parentId` on the live
+  path, epic-slug pattern on the CSV path) rather than by the convention that a
+  child's `Epic` cell happens to be blank. Verified by injection.
+- `Blocking Epics` renamed to `Blocking Issues` in both trackers and the code;
+  `COLUMN_ALIASES` keeps older exports loading.
+- Both trackers restored after the 2026-08-27 account reconfiguration: 117 Jira
+  hyperlinks, 8 dropdowns, formulas, no cell errors.
+- Added `tools/validate_tracker.py` + `data/shared/tracker-schema.json`,
+  cross-team dependency table, change digest, `/refresh` comment workflow,
+  `CREDENTIALS.md`, and a retry around the Smartsheet API.
+- Estimation and confidence rules recorded in the schema: points are not days
+  (1→2, 2→3, 3→5, 5→10), and Confidence has stated criteria.
 
 ### Next session
 
