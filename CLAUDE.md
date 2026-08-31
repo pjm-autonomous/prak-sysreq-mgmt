@@ -23,6 +23,14 @@ project exist, the decomposition (WORKFLOW.md steps 1-11) and the tracker
 generator keys off - they print a note and skip rather than failing. Set a real
 sheet id and `refresh: True` when the tracker goes live.
 
+**The two live trackers are not the same shape.** Embedded is hierarchical:
+87 epic rows with 187 story rows indented beneath 46 of them. Electronics is
+flat - 15 epic rows, no children. Both are valid; the generators read epics
+only and skip child rows structurally (see the `parentId` guard in
+`load_live`). ODOA, GNC and Mobius will onboard from a simplified template
+built from the archived `archived-prak-embedded-core-epics`, so expect flat
+trackers there unless a team chooses to add stories.
+
 All are registered in `tools/teams.py`. **That is the only place a sheet id, URL,
 title, or team path belongs** - every generator reads it, and the per-team paths
 are derived from the slug. Adding a team means adding one entry there and nothing
@@ -202,9 +210,15 @@ it does. Retire it once that note comes back empty.
 
 ## Current state
 
-Embedded-Core and Electronics are live: 102 epics, with the first blockers
+The Embedded tracker of record moved on 2026-08-31 to the sheet David Hayes
+owns, so the team maintains one sheet rather than two. We hold **Editor** on
+it, not Admin: cell values are writable, column structure is not. Two changes
+are pending with him - the `Epic Total (days)` column formula and the
+`Blocking Epics` -> `Blocking Issues` rename - and neither blocks the build.
+
+Embedded-Core and Electronics are live: 102 epics, 62 evaluated, with the first blockers
 recorded (Embedded 2 hard edges; Electronics 1 hard + 8 soft, 9 of them still
-`[guess]`). Most rows still have an empty `Blocking Issues` because the evaluation
+`[guess]`). Only 11 rows carry a `Blocking Issues` value because the evaluation
 meetings have not all happened yet. `dependency-dag.example.*` shows what a fully
 populated DAG looks like.
 

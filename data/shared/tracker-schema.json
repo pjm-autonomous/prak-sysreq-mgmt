@@ -146,6 +146,7 @@
     "_comment": [
       "Trackers may carry child rows: one per story, indented under its epic.",
       "The generators read epics only.",
+      "Optional and per-sheet. Embedded is hierarchical (187 stories under 46 of its 87 epics); Electronics is flat. Both are valid.",
       "",
       "Enforced two ways, because the two load paths see different things:",
       "  live  a row with a parentId is a child and is skipped outright. Exact",

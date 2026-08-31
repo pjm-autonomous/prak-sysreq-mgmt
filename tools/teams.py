@@ -59,8 +59,10 @@ TEAMS: dict[str, dict] = {
         # column formula (points are not days) and the Blocking Epics ->
         # Blocking Issues rename, which COLUMN_ALIASES covers meanwhile.
         #
-        # Previous ids: 8066207570677636 (pre-reconfiguration),
-        # 5240263122308996 (prak-embedded-core-epics, now superseded).
+        # Previous ids: 8066207570677636 (pre-reconfiguration), and
+        # 5240263122308996, now renamed archived-prak-embedded-core-epics
+        # and moved to an archive folder. That sheet is the basis for the
+        # simplified template the remaining teams onboard from.
         "sheet_id": 7348278000570244,
         "sheet_url": ("https://app.smartsheet.com/sheets/"
                       "VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1"),

@@ -3,30 +3,40 @@
 prak-sysreq-mgmt **In-Progress: tooling complete, decomposition not started**
 
 Owner: Patrick McKee, serving as SE for VSP-Embedded and Electronics.
-Last updated 2026-08-26.
+Last updated 2026-08-31.
 
 ## Where this stands
 
 The generator, the DAGs, the published site, and the agendas are done. What is
 outstanding is **data**, not code: 102 epics are loaded and grouped across the two
-live teams, 32 of them evaluated, and only 11 rows carry a dependency. Three more
+live teams, 62 of them evaluated, and only 11 rows carry a dependency. Three more
 teams — ODOA, GNC, Mobius — are registered containers with nothing in them yet.
+
+Embedded's tracker of record is now the sheet David Hayes owns; it carries 187
+story rows indented under 46 of its 87 epics, which the generators skip. The
+old flat sheet is `archived-prak-embedded-core-epics` and becomes the basis for
+the template ODOA, GNC and Mobius will onboard from.
 
 | | Embedded-Core | Electronics | ODOA | GNC | Mobius |
 |---|---:|---:|---:|---:|---:|
 | Epics | 87 | 15 | — | — | — |
 | Capabilities | 9 | 4 | — | — | — |
-| Evaluated (`2TS Required` set) | 17 | 15 | — | — | — |
+| Evaluated (`2TS Required` set) | 47 | 15 | — | — | — |
 | Rows with dependencies recorded | 2 | 9, all provisional | — | — | — |
-| Tracker | live | live | none | none | none |
+| Story rows | 187 | — | — | — | — |
+| Tracker | live (David Hayes') | live | none | none | none |
 | Jira project | `MCHTRNCS` | `ET` | `ODOA` | `GNC` | `MP` |
 
 Published: https://pjm-autonomous.github.io/prak-sysreq-mgmt/ (rebuilds on push).
 
 ### Next session
 
-1. Run the first Electronics evaluation meeting, or confirm the 9 provisional
-   `[guess]` dependencies, whichever comes first.
+1. Ask David Hayes for **Admin** on the Embedded tracker. Two changes are
+   blocked without it: the `Epic Total (days)` column formula (points are not
+   days - it currently yields 0 on all 187 story rows) and the
+   `Blocking Epics` -> `Blocking Issues` rename. Neither blocks the build.
+2. Confirm the 9 provisional `[guess]` Electronics dependencies, or run the
+   first Electronics evaluation meeting, whichever comes first.
 2. After any meeting: export the sheet to CSV, then
    `python3 tools/build_dependency_dag.py --team <t> --csv <export>` and
    `python3 tools/build_index.py`, commit, push. The site updates itself.
@@ -70,15 +80,25 @@ Deferred, in rough value order:
       `tracker-schema.json`, write the registry entry, pull the first snapshot,
       build. Worth doing before ODOA/GNC/Mobius onboard, so all three get the
       same treatment rather than three hand-runs.
-- [ ] **A Smartsheet tracker template.** Decided 2026-08-28 to keep this in the
-      Smartsheet workspace rather than the repo - a template is a Smartsheet
-      object, and `tracker-schema.json` already carries the contract the repo
-      needs. Build it from `prak-embedded-core-epics` once its columns are
-      settled, so a new team starts schema-correct instead of needing the
-      restoration exercise of 2026-08-27. Confirm whether the API can create a
-      sheet from it, which would let `onboard_team.py` do the whole job.
+- [ ] **A simplified Smartsheet tracker template**, for ODOA, GNC and Mobius.
+      Lives in the Smartsheet workspace, not the repo - a template is a
+      Smartsheet object, and `tracker-schema.json` already carries the contract
+      the repo needs.
+
+      Source: `archived-prak-embedded-core-epics` (id `5240263122308996`,
+      renamed and moved to an archive folder 2026-08-31 when Embedded switched
+      to David Hayes' sheet). It is the right basis precisely because it is
+      flat - 87 epic rows, no story children - so a new team starts with the
+      8 columns the generators read and adds hierarchy only if it wants to.
+
+      Must satisfy `tracker-schema.json`: the 7 required columns plus
+      `Eval Status`, with `Baseline Priority`, `2TS Required`, `Confidence` and
+      `Eval Status` as dropdowns. Verify a new sheet with
+      `python3 tools/validate_tracker.py --sheet-id <id>` before registering it.
+      Confirm whether the API can create a sheet from a template, which would
+      let `onboard_team.py` do the whole job.
 - [ ] **"What do I do next?" on the landing page.** The site reports state
-      (28 of 87 evaluated); an SE opening it wants the actionable inverse -
+      (47 of 87 evaluated); an SE opening it wants the actionable inverse -
       which epics still need a 2TS decision, which have no capability, which are
       blocked on something unresolved. Same data, different framing.
 - [ ] **Constrain `Blocking Issues` input.** It is hand-typed free text with a
