@@ -31,7 +31,9 @@
       "hyperlink": "https://asirobots.atlassian.net/browse/",
       "note": "Electronics epics are project ET, not MCHTRNCS."
     },
-    "Title": {"type": "TEXT_NUMBER"},
+    "Title": {
+      "type": "TEXT_NUMBER"
+    },
     "Capability": {
       "type": "TEXT_NUMBER",
       "resolves_to": "prak-v-model capreq-<slug>.md",
@@ -39,12 +41,22 @@
     },
     "Baseline Priority": {
       "type": "PICKLIST",
-      "options": ["Must Have", "Should Have", "Could Have", "Will Not Have"],
+      "options": [
+        "Must Have",
+        "Should Have",
+        "Could Have",
+        "Will Not Have"
+      ],
       "note": "MoSCoW, pre-filled from the epic. Not edited in meetings."
     },
     "2TS Required": {
       "type": "PICKLIST",
-      "options": ["TBD", "Yes", "No"]
+      "options": [
+        "TBD",
+        "Yes",
+        "No"
+      ],
+      "note": "Epic-level only. Child (story) rows leave this blank."
     },
     "Blocking Issues": {
       "type": "TEXT_NUMBER",
@@ -60,7 +72,12 @@
   "optional": {
     "Eval Status": {
       "type": "PICKLIST",
-      "options": ["Not Started", "Needs Info", "Estimated", "Stories Created"],
+      "options": [
+        "Not Started",
+        "Needs Info",
+        "Estimated",
+        "Stories Created"
+      ],
       "note": [
         "Display only - drives the estimated indicator, never an edge or a count.",
         "Roughly ordered by progress. 'Stories Created' came from the Embedded",
@@ -72,7 +89,25 @@
     },
     "Confidence": {
       "type": "PICKLIST",
-      "options": ["Low", "Medium", "High"]
+      "options": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "note": [
+        "How firm the estimate is. Set in the evaluation meeting, not derived.",
+        "",
+        "Medium when either applies:",
+        "  - a decomposition or requirement update is needed but not yet detailed",
+        "    (e.g. MCHTRNCS-197, MCHTRNCS-230)",
+        "  - a develop or implement story is needed from Michael's team",
+        "",
+        "Low when:",
+        "  - a child story reads 'Gates Embedded-Core Work' and no Jira id has yet",
+        "    been found to record as the blocker",
+        "",
+        "High otherwise - the estimate stands on work already understood."
+      ]
     }
   },
   "formulas": {
@@ -82,5 +117,49 @@
     "prak-electronics-epics": {
       "Epic Total (days)": "=2 * (([Mech Stories]@row * [Mech Days/Story]@row) + ([Elec Stories]@row * [Elec Days/Story]@row))"
     }
+  },
+  "estimation": {
+    "_comment": [
+      "Story points are not days. The conversion is non-linear - it is a",
+      "story-point scale, so doubling the points more than doubles the effort.",
+      "Confirmed with the tech team lead 2026-08-30.",
+      "4 points is deliberately absent: the scale is 1/2/3/5 and a 4 in a",
+      "tracker is an error to correct, not a value to interpolate."
+    ],
+    "points_to_days": {
+      "1": 2,
+      "2": 3,
+      "3": 5,
+      "5": 10
+    }
+  },
+  "hierarchy": {
+    "_comment": [
+      "Trackers may carry child rows: one per story, indented under its epic.",
+      "The generators read epics only.",
+      "",
+      "A child row is identified by having a parentId, and by convention its",
+      "Epic cell is empty - which is what currently keeps stories out of the",
+      "DAG. That is a data convention, not an enforced one: an Epic value typed",
+      "into a child row would put a story in the graph as a phantom epic.",
+      "",
+      "Columns that are epic-level only, blank on children:",
+      "  Epic, Jira Key, Capability, Baseline Priority, 2TS Required,",
+      "  2TS Rank, Blocking Issues, Story Count, Eval Status",
+      "Columns meaningful on a child row:",
+      "  Title, Time per Story (points)"
+    ],
+    "child_rows_have_parent_id": true,
+    "epic_only_columns": [
+      "Epic",
+      "Jira Key",
+      "Capability",
+      "Baseline Priority",
+      "2TS Required",
+      "2TS Rank",
+      "Blocking Issues",
+      "Story Count",
+      "Eval Status"
+    ]
   }
 }
