@@ -36,7 +36,7 @@ release loop is manual but small:
 
 ```bash
 # 1. In Smartsheet: File > Export > Export to CSV, for each sheet you changed.
-#    prak-embedded-core-epics  -> sheet 5240263122308996
+#    prak-embedded-core-epics  -> sheet 7348278000570244
 #    prak-electronics-epics    -> sheet 2558444740497284
 
 # 2. Prune the export into that team's snapshot. This overwrites the committed

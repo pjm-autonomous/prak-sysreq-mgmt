@@ -20,7 +20,7 @@ A dependency graph of the 87 Embedded-Core (VSP-Embedded) PRAK epics, generated
 changes. Nothing here is hand-drawn — re-run the generator and the diagram
 reflects current sheet state.
 
-- **Tracker (source of truth):** [prak-embedded-core-epics](https://app.smartsheet.com/sheets/87fgrjP84CvHF3FvFm3Q7gmP4xchH4wVWxCjffG1)
+- **Tracker (source of truth):** [prak-embedded-core-epics](https://app.smartsheet.com/sheets/VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1)
 - **Generator:** [`tools/build_dependency_dag.py`](tools/build_dependency_dag.py)
 - **Artifacts:** [`agile-planning/embedded/`](agile-planning/embedded/)
 
@@ -194,7 +194,7 @@ agile-planning/<slug>/standingagenda.*  that team's standing meeting agenda
 
 | Team | Preset | Sheet id | Jira |
 | ------ | -------- | ---------- | ------ |
-| Embedded-Core | `--team embedded` | `5240263122308996` | project `MCHTRNCS`, VSP-Embedded |
+| Embedded-Core | `--team embedded` | `7348278000570244` | project `MCHTRNCS`, VSP-Embedded |
 | Electronics | `--team electronics` | `2558444740497284` | project `ET`, Electrical Platform |
 | ODOA | `--team odoa` | — not onboarded | project `ODOA`, ODOA Platform |
 | GNC | `--team gnc` | — not onboarded | project `GNC`, GNC Platform |

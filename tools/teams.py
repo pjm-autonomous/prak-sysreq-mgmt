@@ -49,12 +49,21 @@ TEAMS: dict[str, dict] = {
         "name": "Embedded-Core",
         "title": "Embedded-Core Epic Dependency DAG",
         "jira": "VSP-Embedded, project MCHTRNCS",
-        # Re-created 2026-08-27 after a Smartsheet account reconfiguration
-        # corrupted the originals; restored from local exports, so the sheet
-        # id, name and permalink all changed. Old id 8066207570677636.
-        "sheet_id": 5240263122308996,
+        # Tracker of record moved 2026-08-31 to the sheet David Hayes owns, so
+        # the team maintains one sheet rather than two. It carries the same 87
+        # epics plus 187 story rows indented beneath them - the generators read
+        # epics only, see load_live's parentId guard.
+        #
+        # We hold EDITOR on it, not ADMIN: cell values are writable, column
+        # structure is not. Two changes are pending with him - the Epic Total
+        # column formula (points are not days) and the Blocking Epics ->
+        # Blocking Issues rename, which COLUMN_ALIASES covers meanwhile.
+        #
+        # Previous ids: 8066207570677636 (pre-reconfiguration),
+        # 5240263122308996 (prak-embedded-core-epics, now superseded).
+        "sheet_id": 7348278000570244,
         "sheet_url": ("https://app.smartsheet.com/sheets/"
-                      "87fgrjP84CvHF3FvFm3Q7gmP4xchH4wVWxCjffG1"),
+                      "VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1"),
         "refresh": True,     # has a live tracker the scheduled job can read
     },
     "electronics": {

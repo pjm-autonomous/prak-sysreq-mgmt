@@ -196,6 +196,8 @@ def check_structure(sheet: dict, schema: dict, sheet_name: str,
         report.warn(f"Jira Key: {unlinked} of {linked + unlinked} cells have no hyperlink")
 
     for col, formula in schema.get("formulas", {}).get(sheet_name, {}).items():
+        if col.startswith("_"):
+            continue                    # _comment and friends are prose, not columns
         have = formula_cols.get(col, 0)
         if not have:
             report.warn(f"column {col!r} has no formula; schema expects {formula}")

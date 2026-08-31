@@ -111,11 +111,20 @@
     }
   },
   "formulas": {
-    "prak-embedded-core-epics": {
-      "Epic Total (days)": "=([Time per Story (points)]@row * [Story Count]@row) * 2"
-    },
     "prak-electronics-epics": {
       "Epic Total (days)": "=2 * (([Mech Stories]@row * [Mech Days/Story]@row) + ([Elec Stories]@row * [Elec Days/Story]@row))"
+    },
+    "DHayesScratch Embedded-Core Epic Decompositin": {
+      "_comment": [
+        "Sheet name carries a typo upstream ('Decompositin'); it is keyed here",
+        "verbatim because that is what the API reports. Rename needs ADMIN.",
+        "",
+        "The formula below is what the column SHOULD hold. As of 2026-08-31 the",
+        "sheet still has '=[Story Count]@row * [Time per Story (points)]@row',",
+        "which yields 0 on all 187 story rows and applies no points-to-days",
+        "conversion on epics. Changing a column formula needs ADMIN."
+      ],
+      "Epic Total (days)": "=IF(COUNT(CHILDREN()) > 0, SUM(CHILDREN()), IF([Time per Story (points)]@row = 1, 2, IF([Time per Story (points)]@row = 2, 3, IF([Time per Story (points)]@row = 3, 5, IF([Time per Story (points)]@row = 5, 10, \"\")))))"
     }
   },
   "estimation": {
