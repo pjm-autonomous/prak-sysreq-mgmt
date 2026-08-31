@@ -27,9 +27,12 @@ sheet id and `refresh: True` when the tracker goes live.
 87 epic rows with 187 story rows indented beneath 46 of them. Electronics is
 flat - 15 epic rows, no children. Both are valid; the generators read epics
 only and skip child rows structurally (see the `parentId` guard in
-`load_live`). ODOA, GNC and Mobius will onboard from a simplified template
-built from the archived `archived-prak-embedded-core-epics`, so expect flat
-trackers there unless a team chooses to add stories.
+`load_live`). ODOA, GNC and Mobius onboard from **`prak-TEMPLATE-epics`**
+(sheet `4956716494966660`), built from the archived
+`archived-prak-embedded-core-epics` with no rows - so expect flat trackers
+there unless a team chooses to add stories. Copy it, name the copy
+`prak-<slug>-epics`, and run `tools/validate_tracker.py --sheet-id <id>`
+before adding the registry entry.
 
 All are registered in `tools/teams.py`. **That is the only place a sheet id, URL,
 title, or team path belongs** - every generator reads it, and the per-team paths

@@ -97,7 +97,23 @@ Deferred, in rough value order:
       `tracker-schema.json`, write the registry entry, pull the first snapshot,
       build. Worth doing before ODOA/GNC/Mobius onboard, so all three get the
       same treatment rather than three hand-runs.
-- [ ] **A simplified Smartsheet tracker template**, for ODOA, GNC and Mobius.
+- [x] ~~**A simplified Smartsheet tracker template**, for ODOA, GNC and Mobius.~~
+      Done 2026-08-31: **`prak-TEMPLATE-epics`**, sheet id `4956716494966660`.
+      Structure copied from `archived-prak-embedded-core-epics` with no rows,
+      and the `Epic Total (days)` formula corrected to the agreed points scale
+      (the archived sheet still had the pre-conversion `* 2`).
+
+      Rehearsed end to end before being declared done: copied it, added two
+      example epics with a dependency between them, and ran the real pipeline -
+      validator 0 errors, snapshot 2 epics, DAG 1 hard edge over 2 capabilities.
+      Rehearsal sheet deleted.
+
+      To onboard a team: copy the template, name it `prak-<slug>-epics`, fill in
+      epics, then `python3 tools/validate_tracker.py --sheet-id <id>` before
+      adding the entry to `tools/teams.py`.
+
+      Original note, kept for the reasoning:
+      **A simplified Smartsheet tracker template**, for ODOA, GNC and Mobius.
       Lives in the Smartsheet workspace, not the repo - a template is a
       Smartsheet object, and `tracker-schema.json` already carries the contract
       the repo needs.

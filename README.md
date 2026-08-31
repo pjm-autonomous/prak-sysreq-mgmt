@@ -20,7 +20,7 @@ Do not hand-edit a tracker snapshot; the scheduled refresh overwrites it.
 | | State |
 |---|---|
 | Live teams | Embedded-Core (87 epics), Electronics (15) — 62 evaluated, 11 with dependencies |
-| Registered, not onboarded | ODOA, GNC, Mobius — containers only |
+| Registered, not onboarded | ODOA, GNC, Mobius — containers only; onboard from `prak-TEMPLATE-epics` (`4956716494966660`) |
 | Published site | <https://pjm-autonomous.github.io/prak-sysreq-mgmt/>, rebuilt on push |
 | Scheduled refresh | Three times each weekday, 07:00 / 12:00 / 17:00 Mountain |
 | Credentials | `SMARTSHEET_ACCESS_TOKEN` and `VMODEL_READ_TOKEN` both set — see [CREDENTIALS.md](CREDENTIALS.md) |
@@ -48,7 +48,7 @@ A dependency graph of the 87 Embedded-Core (VSP-Embedded) PRAK epics, generated
 changes. Nothing here is hand-drawn — re-run the generator and the diagram
 reflects current sheet state.
 
-- **Tracker (source of truth):** [DHayesScratch Embedded-Core Epic Decompositin](https://app.smartsheet.com/sheets/VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1)
+- **Tracker (source of truth):** [Embedded-Core Epic Decomp](https://app.smartsheet.com/sheets/VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1)
   &mdash; owned by David Hayes; we hold Editor, not Admin.
 - **Generator:** [`tools/build_dependency_dag.py`](tools/build_dependency_dag.py)
 - **Artifacts:** [`agile-planning/embedded/`](agile-planning/embedded/)
