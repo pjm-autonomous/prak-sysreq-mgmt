@@ -135,6 +135,12 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
   stderr - if you see that note, the capability labels may be stale.
 - Priorities are MoSCoW (`Must Have`/`Should Have`/`Could Have`/`Will Not Have`),
   pre-filled from the epic. Do not edit them in meetings.
+- A tracker may carry **child rows** - one per story, indented under its epic.
+  They are skipped structurally: `load_live` drops any row with a `parentId`,
+  and `load_csv` (which has no hierarchy to read) drops any `Epic` id that is
+  not a slug. Relying on the child's `Epic` cell being blank was a convention,
+  not a rule - the Embedded tracker has 187 story rows, and one stray id would
+  have drawn a story as an epic.
 - **`Eval Status`** is optional and read for display only - never for an edge, a
   count, or a grouping. `Estimated` draws a green outline on the graph node and a
   green stripe plus chip on the inventory card. A tracker or hand export without

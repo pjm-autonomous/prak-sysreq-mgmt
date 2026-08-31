@@ -97,6 +97,11 @@ ALL_COLS = COLS + OPTIONAL_COLS
 # The tracker value meaning "this row has been estimated in a meeting".
 ESTIMATED = "Estimated"
 
+# An epic id is a slug. Trackers may also carry indented story rows whose
+# Title is prose, so a row whose Epic cell does not look like a slug is not
+# an epic - it is a story row somebody typed into, or a stray note.
+EPIC_ID = re.compile(r"^epic-[a-z0-9-]+$")
+
 PRIORITY_CLASS = {
     "Must Have": "must", "Should Have": "should",
     "Could Have": "could", "Will Not Have": "wont",
@@ -313,7 +318,14 @@ def load_live(sheet_id: int) -> list[dict]:
 
     id2title = {c["id"]: c["title"] for c in sheet["columns"]}
     records = []
+    children = 0
     for row in sheet.get("rows", []):
+        # A row indented under another is a story, not an epic. Checked on the
+        # row's own hierarchy rather than on whether its Epic cell happens to be
+        # blank, so a story cannot enter the graph by being typed into.
+        if row.get("parentId"):
+            children += 1
+            continue
         rec = {t: "" for t in ALL_COLS}
         for cell in row.get("cells", []):
             title = id2title.get(cell.get("columnId"))
@@ -321,6 +333,9 @@ def load_live(sheet_id: int) -> list[dict]:
             if title in rec:
                 rec[title] = str(cell.get("value", "") or "")
         records.append(rec)
+    if children:
+        print(f"note: skipped {children} child row(s) - stories are not epics",
+              file=sys.stderr)
     return records
 
 
@@ -349,8 +364,24 @@ def load_csv(path: str) -> list[dict]:
             missing = [c for c in COLS if c not in source]
             if missing:
                 sys.exit(f"ERROR: {path} is missing columns: {', '.join(missing)}")
-            return [{col: (row.get(src, "") or "").strip()
+            rows = [{col: (row.get(src, "") or "").strip()
                      for col, src in source.items()} for row in rdr]
+            # A CSV export carries no parent/child information, so the slug
+            # shape is the only thing distinguishing a story row here. Blank
+            # ids are dropped silently by callers; a non-blank id that is not a
+            # slug is worth naming, because it means a row is being ignored.
+            kept, odd = [], []
+            for row in rows:
+                epic = row.get("Epic", "").strip()
+                if epic and not EPIC_ID.match(epic):
+                    odd.append(epic)
+                    continue
+                kept.append(row)
+            if odd:
+                print(f"note: skipped {len(odd)} row(s) whose Epic id is not a "
+                      f"slug: {', '.join(repr(o[:40]) for o in odd[:3])}"
+                      + (" ..." if len(odd) > 3 else ""), file=sys.stderr)
+            return kept
     except FileNotFoundError:
         sys.exit(f"ERROR: no such CSV: {path}")
     except OSError as exc:
