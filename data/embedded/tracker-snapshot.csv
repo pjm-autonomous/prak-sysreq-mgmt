@@ -66,7 +66,7 @@ epic-stop-command-processing-100ms,MCHTRNCS-231,Stop Command Processing Within 1
 epic-stop-event-root-cause,MCHTRNCS-233,Stop Event Root-Cause Distinction,remote-all-stop-safety-capability,Should Have,Yes,,Estimated
 epic-stop-on-execution-fault,MCHTRNCS-205,Stop on Execution Fault or Obstacle,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
 epic-stop-on-heading-overshoot,MCHTRNCS-206,Stop on Heading Overshoot During Turn-In-Place,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
-epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation,path-execution-and-objectives-translation,Must Have,Yes,,Needs Info
+epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
 epic-structured-map-conformance,MCHTRNCS-197,Conform to Structured-Map Rules During Execution,path-execution-and-objectives-translation,Should Have,Yes,,Estimated
 epic-subscribe-all-stop-broadcaster,MCHTRNCS-234,Subscribe to All Stop Broadcaster,remote-all-stop-safety-capability,Must Have,Yes,,Estimated
 epic-support-acumen-vehicles,MCHTRNCS-240,Support Acumen Vehicles,vehicle-kinematics-support,Should Have,TBD,,Not Started
