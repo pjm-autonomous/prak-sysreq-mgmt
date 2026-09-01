@@ -15,13 +15,13 @@ epic-comm-loss-log,MCHTRNCS-225,Communication Loss Log,remote-all-stop-safety-ca
 epic-configurable-kinematic-and-io-interfaces,MCHTRNCS-217,Configurable Kinematic Model and Actuator/Sensor Interfaces,framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
 epic-confirm-estop-clear,MCHTRNCS-134,Confirm E-Stop State Clear,motion-authorization,Must Have,Yes,,Estimated
 epic-confirm-stop-capability,MCHTRNCS-139,Confirm Stop-Capability Operational,motion-authorization,Must Have,Yes,,Estimated
-epic-confirm-valid-path-plan-present,MCHTRNCS-135,Confirm Valid Path Plan Present,motion-authorization,Must Have,Yes,,Estimated
+epic-confirm-valid-path-plan-present,MCHTRNCS-135,Confirm Valid Path Plan Present (HPCU),motion-authorization,Must Have,Yes,,Estimated
 epic-consistent-runtime-icd,MCHTRNCS-299,Consistent Runtime ICD to Command and Control,framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
-epic-continuous-geofence-enforcement,MCHTRNCS-269,Continuous Geofence Enforcement,motion-authorization,Must Have,Yes,ODOA-5527,Estimated
+epic-continuous-geofence-enforcement,MCHTRNCS-269,Continuous Geofence Enforcement,motion-authorization,Must Have,Yes,,Estimated
 epic-destination-agnostic-transfer,MCHTRNCS-280,Destination-Agnostic Transfer,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-detect-path-deviations-violations,MCHTRNCS-199,Detect Path Deviations and Rule Violations,observable-runtime-state,Must Have,Yes,,Estimated
 epic-differential-drive-linear-speed,MCHTRNCS-246,Differential-Drive Robot Linear Speed,vehicle-kinematics-support,Should Have,TBD,,Not Started
-epic-differential-drive-linear-speed-validity,MCHTRNCS-247,Differential-Drive Robot Linear Speed Validity,vehicle-kinematics-support,Must Have,Yes,,Estimated
+epic-differential-drive-linear-speed-validity,MCHTRNCS-247,Differential-Drive Robot Linear Speed Validity (Localization),vehicle-kinematics-support,Must Have,Yes,,Estimated
 epic-disk-pressure-diagnostic,MCHTRNCS-281,Disk-Pressure Diagnostic to Safety Management Unit,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-documented-extension-points,MCHTRNCS-185,Documented Framework Extension Points,framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
 epic-emit-dataset-metadata,MCHTRNCS-282,Emit Data-Set Placement and Metadata Descriptor,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
@@ -66,7 +66,7 @@ epic-stop-command-processing-100ms,MCHTRNCS-231,Stop Command Processing Within 1
 epic-stop-event-root-cause,MCHTRNCS-233,Stop Event Root-Cause Distinction,remote-all-stop-safety-capability,Should Have,Yes,,Estimated
 epic-stop-on-execution-fault,MCHTRNCS-205,Stop on Execution Fault or Obstacle,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
 epic-stop-on-heading-overshoot,MCHTRNCS-206,Stop on Heading Overshoot During Turn-In-Place,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
-epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
+epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation (GeoFence),path-execution-and-objectives-translation,Must Have,Yes,,Estimated
 epic-structured-map-conformance,MCHTRNCS-197,Conform to Structured-Map Rules During Execution,path-execution-and-objectives-translation,Should Have,Yes,,Estimated
 epic-subscribe-all-stop-broadcaster,MCHTRNCS-234,Subscribe to All Stop Broadcaster,remote-all-stop-safety-capability,Must Have,Yes,,Estimated
 epic-support-acumen-vehicles,MCHTRNCS-240,Support Acumen Vehicles,vehicle-kinematics-support,Should Have,TBD,,Not Started
