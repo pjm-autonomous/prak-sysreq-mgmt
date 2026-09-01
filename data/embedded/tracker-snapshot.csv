@@ -8,7 +8,7 @@ epic-all-stop-interface,MCHTRNCS-222,All Stop Initialization and Start Interface
 epic-all-stop-readiness-on-comm,MCHTRNCS-223,All Stop Readiness Gated on External-Source Communication,remote-all-stop-safety-capability,Must Have,Yes,,Estimated
 epic-api-versioning-and-training,MCHTRNCS-183,"API Versioning, Migration Guidance, and Integration Training",framework-packaging-extension-and-integration,Should Have,TBD,,Not Started
 epic-auto-enqueue-on-event,MCHTRNCS-278,Auto-Enqueue Off-load on Event of Interest,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
-epic-cancel-command-response,MCHTRNCS-271,Cancel Command Response,path-execution-and-objectives-translation,Must Have,Yes,,Needs Info
+epic-cancel-command-response,MCHTRNCS-271,Cancel Command Response,path-execution-and-objectives-translation,Must Have,Yes,,Estimated
 epic-cat1-stop-when-no-remote-stop-source,MCHTRNCS-224,Cat1 Stop When No Remote Stop Source,remote-all-stop-safety-capability,Should Have,Yes,,Estimated
 epic-clean-up-staged-copies,MCHTRNCS-279,Clean Up Staged Copies on Transfer and Finalize,blackbox-data-off-load-to-cloud,Should Have,TBD,,Not Started
 epic-comm-loss-log,MCHTRNCS-225,Communication Loss Log,remote-all-stop-safety-capability,Should Have,Yes,,Estimated
