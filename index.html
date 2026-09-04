@@ -73,8 +73,8 @@ recorded but still marked a guess, not yet confirmed in a meeting.</p>
     <h3>Embedded-Core</h3>
     <p class="muted">VSP-Embedded, project MCHTRNCS &middot; 88 epics across 9 capabilities</p>
     <dl class="progress">
-      <div><dt>Epics evaluated</dt><dd>51 / 88 <span class="muted">(58%)</span></dd></div>
-      <div><dt>Dependencies recorded</dt><dd>1 / 88 <span class="muted">(1%)</span></dd></div>
+      <div><dt>Epics evaluated</dt><dd>53 / 88 <span class="muted">(60%)</span></dd></div>
+      <div><dt>Dependencies recorded</dt><dd>5 / 88 <span class="muted">(6%)</span></dd></div>
     </dl>
     <p class="links">
       <a class="primary" href="agile-planning/embedded/dependency-dag.html">Open the dependency DAG &rarr;</a>
@@ -130,16 +130,16 @@ recorded but still marked a guess, not yet confirmed in a meeting.</p>
 
 <h2>What changed in the last 7 days</h2>
 <p class="muted">Counted by diffing the committed snapshots against
-<code>b8dffaa</code>. Only the columns the standing meetings move are
+<code>4963fd8</code>. Only the columns the standing meetings move are
 reported &mdash; 2TS decisions, dependencies, and evaluation status.</p>
-<ul class="digest"><li><b>Embedded-Core</b>: 33 &times; 2TS Required, 1 &times; Blocking Issues</li></ul>
+<ul class="digest"><li><b>Embedded-Core</b>: 24 &times; 2TS Required, 4 &times; Blocking Issues, 26 &times; Eval Status</li></ul>
 
 
 <h2>Cross-team dependencies</h2>
 <p class="muted">Work one team is waiting on another to finish. Each of these
 appears inside the <em>dependent</em> team's DAG as an external node &mdash; so
 without this table the blocking team has no reason to ever see it.
-<b>9</b> recorded.</p>
+<b>14</b> recorded.</p>
 <div class="wrap">
 <table>
   <thead><tr><th>Blocking team</th><th>Blocking issue</th>
@@ -153,7 +153,12 @@ without this table the blocking team has no reason to ever see it.
     <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-teleop-input-staleness-timeout</td><td>Electronics</td><td>Validate Tele-op Input Against Active ICD <span class="muted">&middot; soft &middot; guess</span></td></tr>
     <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-validate-supplied-path</td><td>Electronics</td><td>Acknowledge Path Acceptance or Rejection to C2 <span class="muted">&middot; soft &middot; guess</span></td></tr>
     <tr><td><b>Embedded-Core</b></td><td class="cap-id">epic-withhold-motion-until-recovery-authorized</td><td>Electronics</td><td>Record Recovery Acknowledgment <span class="muted">&middot; soft &middot; guess</span></td></tr>
+    <tr><td><b>not yet tracked</b></td><td class="cap-id">MP-4575 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Continuous Geofence Enforcement</td></tr>
+    <tr><td><b>not yet tracked</b></td><td class="cap-id">MP-4575 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Objectives Reception</td></tr>
+    <tr><td><b>not yet tracked</b></td><td class="cap-id">MP-4575 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Stop on Path Deviation (GeoFence)</td></tr>
     <tr><td><b>not yet tracked</b></td><td class="cap-id">ODOA-5527 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Emit Obstacle Stop or Avoidance Actuation</td></tr>
+    <tr><td><b>not yet tracked</b></td><td class="cap-id">PAT-413 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Objective Mission Cancel Command Response</td></tr>
+    <tr><td><b>not yet tracked</b></td><td class="cap-id">PAT-413 <span class="muted">(no tracker)</span></td><td>Embedded-Core</td><td>Objectives Reception</td></tr>
   </tbody>
 </table>
 </div>
