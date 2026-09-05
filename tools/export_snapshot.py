@@ -15,8 +15,8 @@ the meetings recorded.
 
 Only the columns the generators read are written: the 7 required ones plus
 Eval Status, which drives a visual indicator and is tolerated when absent. The
-sheet has sixteen; the rest are meeting scratch space (Batch, 2TS Rank, Story
-Titles, Owner, ...) and are deliberately left out - this repo is public and the
+sheet has sixteen; the rest are meeting scratch space (Batch, Owner, ...) and
+are deliberately left out - this repo is public and the
 snapshot is committed.
 
 --live requires SMARTSHEET_ACCESS_TOKEN; --from-csv requires nothing.
@@ -54,6 +54,9 @@ def main() -> None:
                          "reaches this public repo.")
     args = ap.parse_args()
 
+    # Only a registry entry can say what the sheet behind an id should be
+    # called; a bare --sheet-id has nothing to assert against.
+    expect_name = None
     if args.team:
         cfg = team_registry.team(args.team)
         # A team with no sheet id has no tracker of record to pull from. An
@@ -65,6 +68,7 @@ def main() -> None:
             return
         if args.sheet_id == DEFAULT_SHEET_ID and cfg["sheet_id"] is not None:
             args.sheet_id = cfg["sheet_id"]
+            expect_name = cfg.get("sheet_name")
         if not args.out:
             args.out = team_registry.abspath(cfg["snapshot"])
     if not args.out:
@@ -75,7 +79,7 @@ def main() -> None:
         rows = load_csv(args.from_csv)
     else:
         source = f"sheet {args.sheet_id}"
-        rows = load_live(args.sheet_id)
+        rows = load_live(args.sheet_id, expect_name)
     records = [r for r in rows if r["Epic"].strip()]
     if not records:
         sys.exit(f"ERROR: {source} returned no rows with an Epic id; "

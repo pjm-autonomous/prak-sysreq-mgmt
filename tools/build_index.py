@@ -32,10 +32,14 @@ from datetime import datetime, timezone
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 import teams as team_registry  # noqa: E402
-from build_dependency_dag import COLUMN_ALIASES, parse_blockers  # noqa: E402
+from build_dependency_dag import (  # noqa: E402
+    COLUMN_ALIASES,
+    drop_duplicate_epics,
+    merge_capability_jama,
+    parse_blockers,
+)
 
 ROOT = team_registry.ROOT
-JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
 # Repo blob base, so the "how this is built" links render as markdown on
 # github.com instead of being served raw by GitHub Pages.
 REPO_BLOB = "https://github.com/pjm-autonomous/prak-sysreq-mgmt/blob/main/"
@@ -61,8 +65,21 @@ def esc(s: str) -> str:
 
 
 def load_rows(path: str) -> list[dict]:
+    """Snapshot rows, with duplicate Epic ids removed the same way the DAG
+    removes them.
+
+    The landing page counts epics and the DAG draws them; if only one of the two
+    collapses a duplicate slug, the site says "88 epics" beside a diagram holding
+    87 nodes and neither number is checkable against the other. Same helper, so
+    they cannot drift.
+    """
     with open(path, encoding="utf-8") as fh:
-        return list(csv.DictReader(fh))
+        rows = list(csv.DictReader(fh))
+    for row in rows:                       # the helper reads these two keys
+        row.setdefault("Epic", "")
+        row.setdefault("Title", "")
+        row.setdefault("Jira Key", "")
+    return drop_duplicate_epics([r for r in rows if r["Epic"].strip()])
 
 
 def load_json(path: str) -> dict:
@@ -310,16 +327,18 @@ reported &mdash; 2TS decisions, dependencies, and evaluation status.</p>
 """
 
 
-def capability_rows(per_team: list[collections.Counter], meta: dict,
-                    cap_jira: dict) -> str:
+def capability_rows(per_team: list[collections.Counter], meta: dict) -> str:
+    """One row per capability. The last cell links to the capability requirement
+    in Jama - the single layer every team's tracker shares, and since the Jira
+    Initiatives were retired the only place that layer exists as an item."""
     slugs = sorted(set().union(*per_team) if per_team else set(),
                    key=lambda s: meta.get(s, {}).get("cap_id", "zz"))
     out = []
     for slug in slugs:
         info = meta.get(slug, {})
-        key = cap_jira.get(slug, "")
-        key_html = (f'<a href="{JIRA_BROWSE}{esc(key)}" target="_blank" '
-                    f'rel="noopener">{esc(key)}</a>' if key else "&mdash;")
+        jama = info.get("jama_url", "")
+        key_html = (f'<a href="{esc(jama)}" target="_blank" '
+                    f'rel="noopener">Jama &#8599;</a>' if jama else "&mdash;")
         cells = "".join(f'<td class="num">{c.get(slug, 0) or "&mdash;"}</td>'
                         for c in per_team)
         out.append(f'    <tr><td class="cap-id">{esc(info.get("cap_id", "?"))}</td>'
@@ -457,7 +476,8 @@ def main() -> None:
     updated = args.timestamp or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     meta = load_json(team_registry.abspath(team_registry.CAPABILITY_META))
-    cap_jira = load_json(team_registry.abspath(team_registry.CAPABILITY_JIRA))
+    meta = merge_capability_jama(
+        meta, team_registry.abspath(team_registry.CAPABILITY_JAMA))
 
     cards, per_team, totals, names, pending = [], [], [], [], []
     loaded: dict[str, list[dict]] = {}
@@ -499,7 +519,7 @@ def main() -> None:
                     "".join(f'<th class="num">{t}</th>' for t in totals))
            .replace("__CROSS_TEAM__", cross_team_html(cross_team_edges(loaded)))
            .replace("__DIGEST__", digest_html(args.digest_days))
-           .replace("__CAP_ROWS__", capability_rows(per_team, meta, cap_jira))
+           .replace("__CAP_ROWS__", capability_rows(per_team, meta))
            .replace("__EXAMPLE_DAG__", esc(EXAMPLE_DAG))
            .replace("__EXAMPLE_NAME__", esc(os.path.basename(EXAMPLE_DAG)))
            .replace("__N_TEAMS__", str(len(TEAMS)))

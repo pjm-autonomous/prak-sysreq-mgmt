@@ -148,7 +148,15 @@ jobs:
 
       - name: Validate the trackers
         # Runs after the snapshot pull, before the build, so a tracker fault is
-        # named rather than published as a plausible-looking diagram. Does NOT
+        # named rather than published as a plausible-looking diagram.
+        #
+        # --vmodel matters here for the same reason it does in the build step:
+        # this reads capability slugs to decide whether a tracker's Capability
+        # value resolves. Without it the validator fell back to the committed
+        # cache and printed the "not checked out" note on every run - which
+        # looked like the checkout had failed when only the build had it. A slug
+        # added upstream would have been reported as unknown. Fixed 2026-09-01.
+        # Does NOT
         # fail the job: the previous snapshot is already committed and the site
         # should keep serving, so a data fault is reported and the refresh
         # continues. The job summary is where an SE will actually see it.
@@ -156,7 +164,7 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          python3 tools/validate_tracker.py > validation.txt 2>&1
+          python3 tools/validate_tracker.py --vmodel "$GITHUB_WORKSPACE/.vmodel" > validation.txt 2>&1
           status=$?
           set -e
           cat validation.txt

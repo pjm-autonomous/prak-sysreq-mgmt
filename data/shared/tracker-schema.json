@@ -24,13 +24,6 @@
       "pattern": "^epic-[a-z0-9-]+$",
       "note": "Stable slug, the id every dependency resolves against."
     },
-    "Jira Key": {
-      "type": "TEXT_NUMBER",
-      "unique": true,
-      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
-      "hyperlink": "https://asirobots.atlassian.net/browse/",
-      "note": "Electronics epics are project ET, not MCHTRNCS."
-    },
     "Title": {
       "type": "TEXT_NUMBER"
     },
@@ -70,6 +63,13 @@
     }
   },
   "optional": {
+    "Jira Key": {
+      "type": "TEXT_NUMBER",
+      "unique": true,
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+      "hyperlink": "https://asirobots.atlassian.net/browse/",
+      "note": "Most are  MCHTRNCS, however supporting teams may work under their own projects (e.g., Electronics epics are project ET)."
+    },
     "Eval Status": {
       "type": "PICKLIST",
       "options": [
@@ -111,35 +111,73 @@
     }
   },
   "formulas": {
+    "_comment": [
+      "Keyed by SHEET NAME, which is what the API reports and what teams.py",
+      "records as sheet_name. A rename silently drops every check in a block",
+      "rather than failing one, so validate_tracker names a sheet it has no",
+      "block for, and load_live warns when the live name and the registry",
+      "disagree. Re-key both whenever a sheet is renamed - this sheet was",
+      "'DHayesScratch Embedded-Core Epic Decompositin' (typo included) until",
+      "2026-08-31.",
+      "",
+      "'Epic Total (days)' was dropped from this contract on 2026-09-01. No",
+      "generator ever read it, effort is tracked in points rather than days,",
+      "and its presence or absence on any tracker is now immaterial to the",
+      "build. Do not re-add a check for it."
+    ],
     "prak-electronics-epics": {
-      "Epic Total (days)": "=2 * (([Mech Stories]@row * [Mech Days/Story]@row) + ([Elec Stories]@row * [Elec Days/Story]@row))"
+      "_comment": [
+        "Nothing is checked on this sheet today. The block is kept, rather than",
+        "deleted, so validate_tracker does not report the sheet as unknown to",
+        "the contract - an empty block means 'no formula expectations', a",
+        "missing one means 'nobody has said'."
+      ]
     },
     "Embedded-Core Epic Decomp": {
       "_comment": [
-        "Keyed by sheet name, which is what the API reports. David Hayes renamed",
-        "this sheet on 2026-08-31 (it was 'DHayesScratch Embedded-Core Epic",
-        "Decompositin', typo included) - a rename silently stops this check",
-        "matching, so re-key it whenever the sheet is renamed.",
+        "All three are CONDITIONAL COLUMN formulas keyed on JiraType, added",
+        "2026-09-01. A column formula normally applies one rule to every row,",
+        "which is why the epic/story split has to live inside the IF rather than",
+        "in which rows carry a formula - that is what makes a column formula",
+        "usable here at all, where a plain =SUM(CHILDREN()) could not be.",
         "",
-        "Epic Total (days) below is what the column SHOULD hold. As of 2026-08-31",
-        "the sheet still has '=[Story Count]@row * [Time per Story (points)]@row',",
-        "which yields 0 on every story row and applies no points-to-days",
-        "conversion. Changing a column formula needs ADMIN.",
+        "Story Points is DERIVED, never typed. On a story row it is",
+        "ROUNDUP(Duration/2) - the exact inverse of the agreed points scale at",
+        "its canonical values (2d->1, 3d->2, 5d->3, 10d->5). On an epic row it",
+        "sums its children. The column is locked on the sheet, which is correct:",
+        "the meeting's input is Duration in days, not points.",
         "",
-        "Story Count is his, added 2026-08-31: deriving it from the child count",
-        "removes the whole class of count-vs-children mismatch by construction."
+        "Caution: an off-scale Duration yields an off-scale point value. 7d",
+        "gives 4, and 4 is deliberately not on the 1/2/3/5 scale. Durations are",
+        "worth keeping on 2/3/5/10 if the points are to mean anything.",
+        "",
+        "'Epic Total (days)' was removed from the sheet. Its purpose was reallocated to ",
+        "an epic's Duration. It is deliberately NOT checked",
+        "here - no generator reads it and its presence is immaterial to the",
+        "build. Do not re-add a check for it."
       ],
-      "Epic Total (days)": "=IF(COUNT(CHILDREN()) > 0, SUM(CHILDREN()), IF([Time per Story (points)]@row = 1, 2, IF([Time per Story (points)]@row = 2, 3, IF([Time per Story (points)]@row = 3, 5, IF([Time per Story (points)]@row = 5, 10, \"\")))))",
-      "Story Count": "=NumChildren@row"
+      "Story Points": "=IF(JiraType@row = \"Epic\", SUM(CHILDREN()), ROUNDUP(Duration@row / 2))",
+      "ManDays": "=IF(JiraType@row = \"Story\", NETWORKDAY(Start@row, Finish@row), \"\")"
     }
   },
   "estimation": {
     "_comment": [
-      "Story points are not days. The conversion is non-linear - it is a",
+      "The captured input is DURATION IN DAYS, on story rows. Story Points are",
+      "derived from it by the tracker (see the formulas block) and rolled up to",
+      "the epic. Nobody types a point value and nobody types an epic total.",
+      "",
+      "Story points are not days. The conversion below is non-linear - it is a",
       "story-point scale, so doubling the points more than doubles the effort.",
       "Confirmed with the tech team lead 2026-08-30.",
       "4 points is deliberately absent: the scale is 1/2/3/5 and a 4 in a",
-      "tracker is an error to correct, not a value to interpolate."
+      "tracker is an error to correct, not a value to interpolate.",
+      "",
+      "ROUNDUP(Duration/2) inverts this table exactly at its canonical values,",
+      "which is why it is the right derivation and not an approximation:",
+      "  2d -> 1    3d -> 2    5d -> 3    10d -> 5",
+      "A Duration off that set produces a point value off the scale - 7d gives",
+      "4 - so the scale is only meaningful while Durations stay on 2/3/5/10.",
+      "No generator reads any of this."
     ],
     "points_to_days": {
       "1": 2,
@@ -154,6 +192,16 @@
       "The generators read epics only.",
       "Optional and per-sheet. Embedded is hierarchical (187 stories under 46 of its 87 epics); Electronics is flat. Both are valid.",
       "",
+      "TWO INDEPENDENT NOTIONS OF 'is this an epic' now exist, and they must",
+      "agree. This repo uses row hierarchy: parentId on the live path, the Epic",
+      "slug pattern on the CSV path. The SHEET uses the JiraType column, which",
+      "every conditional column formula added 2026-09-01 keys on. A row whose",
+      "JiraType disagrees with its indentation produces a graph and a set of",
+      "sheet numbers that describe different things, with nothing to say so -",
+      "an epic row marked Story silently gets ROUNDUP(Duration/2) instead of a",
+      "roll-up, and a story row marked Epic sums children it does not have.",
+      "validate_tracker --live cross-checks the two.",
+      "",
       "Enforced two ways, because the two load paths see different things:",
       "  live  a row with a parentId is a child and is skipped outright. Exact",
       "        and structural - an Epic value typed into a story row cannot put",
@@ -163,21 +211,19 @@
       "        named on stderr.",
       "",
       "Columns that are epic-level only, blank on children:",
-      "  Epic, Jira Key, Capability, Baseline Priority, 2TS Required,",
-      "  2TS Rank, Blocking Issues, Story Count, Eval Status",
+      "  Epic, Capability, Baseline Priority, 2TS Required,Blocking Issues, Eval Status",
       "Columns meaningful on a child row:",
-      "  Title, Time per Story (points)"
+      "  Title, Story Points",
+      "Story Points is the only column carried on BOTH: hand-entered on each",
+      "story row, and summed from the children on the epic row above it."
     ],
     "child_rows_have_parent_id": true,
     "epic_only_columns": [
       "Epic",
-      "Jira Key",
       "Capability",
       "Baseline Priority",
       "2TS Required",
-      "2TS Rank",
       "Blocking Issues",
-      "Story Count",
       "Eval Status"
     ]
   }

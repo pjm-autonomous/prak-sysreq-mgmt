@@ -174,6 +174,53 @@ def check_structure(sheet: dict, schema: dict, sheet_name: str,
             missing = [o for o in want_options if o not in (column.get("options") or [])]
             if missing:
                 report.warn(f"column {col!r} dropdown is missing options: {missing}")
+        # Tested 2026-09-01: Smartsheet's CSV and Excel exports DO carry hidden
+        # columns (they arrive with the data, just not displayed), so neither
+        # load_live nor the offline --csv route is affected. Only a PDF export
+        # drops them, and nothing here reads a PDF. Reported at all because a
+        # required column nobody can see on the grid is how a column silently
+        # stops being maintained - not because the build is at risk.
+        if column.get("hidden"):
+            report.warn(f"column {col!r} is hidden on the grid. Harmless to the "
+                        f"build - CSV and Excel exports still carry it, and "
+                        f"load_live reads the API - but it is invisible to "
+                        f"anyone editing the sheet, and only a PDF export omits "
+                        f"it. Unhide it if the team is meant to maintain it.")
+
+    # JiraType vs row hierarchy. Since 2026-09-01 the sheet's own column
+    # formulas decide epic-vs-story from the JiraType cell, while every
+    # generator here decides it from indentation. When those disagree nothing
+    # errors: the sheet quietly computes the wrong roll-up for that row while
+    # the graph draws it the other way, and both look fine. Only the live sheet
+    # carries parentId, so this cannot be checked from a snapshot.
+    jira_type_col = next((c["id"] for c in sheet["columns"]
+                          if c["title"] == "JiraType"), None)
+    if jira_type_col is not None:
+        for row in sheet.get("rows", []):
+            cells = row.get("cells", [])
+            # A wholly empty row is a spacer, not a fault - the sheet carries a
+            # few and they mean nothing to anyone.
+            if not any(str(c.get("value", "") or "").strip() for c in cells):
+                continue
+            value = next((str(c.get("value", "") or "").strip()
+                          for c in cells
+                          if c.get("columnId") == jira_type_col), "")
+            is_child = bool(row.get("parentId"))
+            want = "Story" if is_child else "Epic"
+            where = f"row {row.get('rowNumber', '?')}"
+            if not value:
+                report.warn(f"{where}: JiraType is blank; the sheet's column "
+                            f"formulas key on it, so Story Points and Story "
+                            f"Count are wrong for this row")
+            elif value != want:
+                article = "an epic" if value == "Epic" else "a story"
+                mine = "a story" if is_child else "an epic"
+                report.error(
+                    f"{where}: JiraType is {value!r} but the row is "
+                    f"{'indented under an epic' if is_child else 'top-level'}, "
+                    f"so the tracker treats it as {article} while every "
+                    f"generator here treats it as {mine}. Story Points are "
+                    f"computed on the wrong branch.")
 
     # Hyperlinks and formulas.
     id2title = {c["id"]: c["title"] for c in sheet["columns"]}
@@ -195,7 +242,16 @@ def check_structure(sheet: dict, schema: dict, sheet_name: str,
     if unlinked:
         report.warn(f"Jira Key: {unlinked} of {linked + unlinked} cells have no hyperlink")
 
-    for col, formula in schema.get("formulas", {}).get(sheet_name, {}).items():
+    # Formula expectations are keyed by sheet NAME, so a rename silently drops
+    # every check in the block rather than failing one. Name the gap.
+    known_blocks = schema.get("formulas", {})
+    named = sorted(k for k in known_blocks if not k.startswith("_"))
+    if named and sheet_name not in known_blocks:
+        report.warn(f"no formula expectations for sheet {sheet_name!r}; "
+                    f"tracker-schema.json keys them by sheet name and knows "
+                    f"{named}. Re-key the block if the sheet was renamed, "
+                    f"or add one.")
+    for col, formula in known_blocks.get(sheet_name, {}).items():
         if col.startswith("_"):
             continue                    # _comment and friends are prose, not columns
         have = formula_cols.get(col, 0)

@@ -77,7 +77,14 @@ SHEET_URL = "https://app.smartsheet.com/sheets/VH9Xph6WX472HPP699HWXHg9hRGFXXh88
 JIRA_BROWSE = "https://asirobots.atlassian.net/browse/"
 
 # Column titles we read (must match the tracker headers exactly).
-COLS = ["Epic", "Jira Key", "Title", "Capability",
+# Required to load. A tracker missing one of these cannot be built from.
+#
+# "Jira Key" is deliberately NOT here. Jira Epics, Objectives and Initiatives are
+# being retired in favour of Jama User Story <-> Jira Story sync, so the key a
+# tracker row carries today points at an issue type that is going away. The build
+# must survive that column being emptied or dropped, and the identity it once
+# supplied comes from the Epic slug, which is a prak-v-model sysreq id.
+COLS = ["Epic", "Title", "Capability",
         "Baseline Priority", "2TS Required", "Blocking Issues"]
 
 # Read when present, tolerated when absent. Eval Status drives a visual
@@ -91,8 +98,17 @@ COLS = ["Epic", "Jira Key", "Title", "Capability",
 # column is a meeting-time decision; it should not strand old exports.
 COLUMN_ALIASES = {"Blocking Epics": "Blocking Issues"}
 
-OPTIONAL_COLS = ["Eval Status"]
-ALL_COLS = COLS + OPTIONAL_COLS
+OPTIONAL_COLS = ["Jira Key", "Eval Status"]
+
+# Read order, and the column order export_snapshot writes. Stated explicitly
+# rather than derived as COLS + OPTIONAL_COLS, because those two express
+# required-ness and this expresses snapshot layout - deriving one from the other
+# means moving a column between required and optional silently rewrites the
+# header of every committed snapshot and churns the diff for no reason.
+ALL_COLS = ["Epic", "Jira Key", "Title", "Capability",
+            "Baseline Priority", "2TS Required", "Blocking Issues",
+            "Eval Status"]
+assert set(ALL_COLS) == set(COLS) | set(OPTIONAL_COLS),     "ALL_COLS must list exactly the required and optional columns"
 
 # The tracker value meaning "this row has been estimated in a meeting".
 ESTIMATED = "Estimated"
@@ -119,7 +135,7 @@ EXTERNAL_CAPABILITY = "other tracker"
 _HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_VMODEL = os.path.normpath(os.path.join(_HERE, "..", "..", "prak-v-model"))
 DEFAULT_META_CACHE = team_registry.abspath(team_registry.CAPABILITY_META)
-DEFAULT_CAP_JIRA = team_registry.abspath(team_registry.CAPABILITY_JIRA)
+DEFAULT_CAP_JAMA = team_registry.abspath(team_registry.CAPABILITY_JAMA)
 DEFAULT_MERMAID_BUNDLE = os.path.normpath(
     os.path.join(_HERE, "..", "vendor", "mermaid.min.js"))
 MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
@@ -197,11 +213,13 @@ def load_capability_meta(vmodel_dir: str, cache_path: str) -> dict:
         entry = {"cap_id": front.get("prd-id", ""),
                  "title": front.get("title", ""),
                  "priority": front.get("priority", "")}
-        # Only capabilities that have a Jira Initiative carry the key. Omit the
-        # field rather than storing "" so the viewer's "is there a parent issue"
-        # check stays a plain truthiness test.
-        if front.get("jira-key"):
-            entry["jira_key"] = front["jira-key"]
+        # Only capabilities with a Jama item carry the id. Omit the field rather
+        # than storing "" so the viewer's "is there a parent item" check stays a
+        # plain truthiness test. Not in prak-v-model frontmatter today - read
+        # here so adding it upstream needs no change on this side, and
+        # capability-jama.json can then be deleted as its Jira predecessor was.
+        if front.get("jama-id"):
+            entry["jama_id"] = front["jama-id"]
         meta[slug] = entry
 
     try:
@@ -214,53 +232,47 @@ def load_capability_meta(vmodel_dir: str, cache_path: str) -> dict:
     return meta
 
 
-def merge_capability_jira(meta: dict, path: str) -> dict:
-    """TRANSITIONAL. Fill in Jira Initiative keys the capreq frontmatter lacks.
+def merge_capability_jama(meta: dict, path: str) -> dict:
+    """Resolve each capability to a Jama URL, from capability-jama.json.
 
-    A capability is a Jira Initiative issue (e.g. MCHTRNCS-259 for CAP-01), and
-    every team's epics hang off those same parents - it is the one place the
-    trackers meet. That key now lives in the capreq frontmatter as `jira-key`,
-    alongside prd-id, so prak-v-model is the source of record for it like it
-    already is for the id, title and priority.
+    A capability requirement is the one layer every team's tracker shares, so it
+    is the only place a cross-team reader can go to see the whole picture. That
+    used to be a Jira Initiative; Initiatives are being retired along with Jira
+    Epics and Objectives, so the target is now the capreq's item in Jama.
 
-    This file is what the mapping was before that: a hand-maintained JSON map.
-    It is kept only so a checkout predating the frontmatter change still renders
-    Jira links. **Frontmatter wins** - this only fills slugs that came back
-    without a key. Delete the file and this function once every capreq carries
-    `jira-key`; the note below tells you when a slug is still relying on it.
+    Frontmatter wins, as it did for the Jira key: a `jama-id` read from the
+    capreq is preferred over anything in this file, so the file can be deleted
+    once prak-v-model carries the field. A value may be a bare item id
+    (substituted into url_template) or a complete URL (used verbatim).
     """
     try:
         with open(path, encoding="utf-8") as fh:
-            cap_jira = json.load(fh)
+            doc = json.load(fh)
     except (OSError, ValueError):
-        return meta
-    filled = []
-    for slug, key in cap_jira.items():
+        print(f"note: no capability Jama map at {path}; capability tiles will "
+              f"render without a link", file=sys.stderr)
+        doc = {}
+    template = doc.get("url_template", "")
+    items = doc.get("items", {})
+
+    unlinked = []
+    for slug, entry in meta.items():
+        raw = str(entry.get("jama_id") or items.get(slug, "")).strip()
+        if raw.startswith("http://") or raw.startswith("https://"):
+            entry["jama_url"] = raw
+        elif raw and template:
+            entry["jama_url"] = template.replace("{id}", raw)
+        else:
+            unlinked.append(slug)
+    for slug in items:
         if slug not in meta:
-            print(f"note: {path} lists unknown capability {slug!r}", file=sys.stderr)
-        elif not meta[slug].get("jira_key"):
-            meta[slug]["jira_key"] = key
-            filled.append(slug)
-    if filled:
-        print(f"note: {len(filled)} capability Jira key(s) came from the legacy "
-              f"{os.path.basename(path)} rather than capreq frontmatter: "
-              + ", ".join(sorted(filled)), file=sys.stderr)
+            print(f"note: {path} lists unknown capability {slug!r}",
+                  file=sys.stderr)
+    if unlinked:
+        print(f"note: {len(unlinked)} capability tile(s) have no Jama link yet: "
+              f"{', '.join(sorted(unlinked))}. Fill them in "
+              f"{os.path.relpath(path, team_registry.ROOT)}.", file=sys.stderr)
     return meta
-
-
-# --------------------------------------------------------------------------- #
-# Data loading
-# --------------------------------------------------------------------------- #
-# Statuses worth a second attempt. 429 and 5xx are the textbook transients.
-# 403 is here on evidence, not principle: on 2026-08-27, immediately after a
-# Smartsheet account reconfiguration, a sheet returned 403 errorCode 4003
-# "Access Denied" once and then served the same request twice in a row. A real
-# permission failure still fails - just a few seconds later, having said so on
-# stderr each time - and the scheduled refresh is worth more than that delay.
-RETRY_STATUS = frozenset({403, 429, 500, 502, 503, 504})
-RETRY_ATTEMPTS = 4
-RETRY_BACKOFF = 2.0          # seconds, doubled after each failed attempt
-
 
 def smartsheet_get(path: str, token: str, timeout: int = 60) -> dict:
     """GET one Smartsheet API path, retrying transient failures.
@@ -310,11 +322,27 @@ def smartsheet_get(path: str, token: str, timeout: int = 60) -> dict:
     raise AssertionError("unreachable")            # pragma: no cover
 
 
-def load_live(sheet_id: int) -> list[dict]:
+def load_live(sheet_id: int, expect_name: str | None = None) -> list[dict]:
+    """Read a tracker from the API. sheet_id is the address; expect_name, when the
+    registry supplies one, is checked against the name the API reports.
+
+    A sheet id is opaque - nothing about 7348278000570244 says which tracker it
+    is - so an id that has been repointed, or a sheet renamed underneath it, both
+    read as a clean successful pull. The name check turns either into a line on
+    stderr. It never fails the run: a rename is a legitimate thing for a sheet
+    owner to do, and the scheduled refresh must not go red because one happened.
+    """
     token = os.environ.get("SMARTSHEET_ACCESS_TOKEN")
     if not token:
         sys.exit("ERROR: --live needs SMARTSHEET_ACCESS_TOKEN in the environment.")
     sheet = smartsheet_get(f"sheets/{sheet_id}", token)
+    got_name = sheet.get("name", "")
+    if expect_name and got_name != expect_name:
+        print(f"WARNING: sheet {sheet_id} is named {got_name!r}, but the registry "
+              f"expects {expect_name!r}. Either the sheet was renamed - re-key "
+              f"sheet_name in tools/teams.py and the per-sheet formula block in "
+              f"tracker-schema.json - or this id no longer points at the tracker "
+              f"of record.", file=sys.stderr)
 
     id2title = {c["id"]: c["title"] for c in sheet["columns"]}
     records = []
@@ -337,6 +365,42 @@ def load_live(sheet_id: int) -> list[dict]:
         print(f"note: skipped {children} child row(s) - stories are not epics",
               file=sys.stderr)
     return records
+
+
+def drop_duplicate_epics(records: list[dict]) -> list[dict]:
+    """Keep the first row for each Epic id, and say loudly what was dropped.
+
+    Every lookup downstream is a dict keyed by Epic id, so two rows sharing one
+    id do not collide visibly - the later one wins the graph node while both
+    still appear in the inventory, and the header counts rows rather than nodes
+    and reports one more epic than the diagram can possibly contain. That is
+    exactly the quiet wrongness this repo exists to avoid: on 2026-09-01 a second
+    'epic-cancel-command-response' row took the node and MCHTRNCS-271 vanished
+    from the published DAG with nothing said.
+
+    Dropping the later row is not a fix - the tracker is - but a named drop
+    beats a silent one, and the site keeps rendering. validate_tracker.py
+    reports the same condition as an ERROR.
+    """
+    seen: dict[str, dict] = {}
+    kept = []
+    for rec in records:
+        eid = rec["Epic"].strip()
+        first = seen.get(eid)
+        if first is None:
+            seen[eid] = rec
+            kept.append(rec)
+            continue
+
+        def _label(r: dict) -> str:
+            key = r["Jira Key"].strip() or "no Jira key"
+            return f"{r['Title'].strip() or '(untitled)'} [{key}]"
+
+        print(f"WARNING: duplicate Epic id {eid!r} - keeping {_label(first)}, "
+              f"DROPPING {_label(rec)}. Two epics cannot share one id; give the "
+              f"second its own slug in the tracker. Run validate_tracker.py.",
+              file=sys.stderr)
+    return kept
 
 
 def is_estimated(rec: dict) -> bool:
@@ -364,8 +428,13 @@ def load_csv(path: str) -> list[dict]:
             missing = [c for c in COLS if c not in source]
             if missing:
                 sys.exit(f"ERROR: {path} is missing columns: {', '.join(missing)}")
-            rows = [{col: (row.get(src, "") or "").strip()
-                     for col, src in source.items()} for row in rdr]
+            # Every column in ALL_COLS gets a key whether or not the file has
+            # it. An optional column that is simply absent must read as empty,
+            # not raise a KeyError three call frames away - load_live already
+            # guarantees this by starting each record from a full template.
+            rows = [{**{c: "" for c in ALL_COLS},
+                     **{col: (row.get(src, "") or "").strip()
+                        for col, src in source.items()}} for row in rdr]
             # A CSV export carries no parent/child information, so the slug
             # shape is the only thing distinguishing a story row here. Blank
             # ids are dropped silently by callers; a non-blank id that is not a
@@ -708,25 +777,23 @@ def capability_code(slug: str, meta: dict) -> str:
 
 
 def capability_code_html(slug: str, meta: dict, cls: str) -> str:
-    """The CAP-nn chip, linked to the capability's Jira Initiative issue when
-    known. Rendered as a span inside the tile button, because a nested <a> in a
+    """The CAP-nn chip, marked when the capability resolves to a Jama item.
+    Rendered as a span inside the tile button, because a nested <a> in a
     <button> is invalid HTML and swallows the tile's own click."""
     code = esc_html(capability_code(slug, meta))
-    jira = meta.get(slug, {}).get("jira_key", "")
-    title = (f' title="Jira parent {esc_html(jira)} - shared with the other '
-             f'team\'s tracker"' if jira else "")
+    linked = bool(meta.get(slug, {}).get("jama_url", ""))
+    title = (" title=\"Capability requirement in Jama - the one layer shared "
+             "with the other teams' trackers\"" if linked else "")
     return f'<span class="{cls}"{title}>{code}</span>'
 
-
-def capability_jira_html(slug: str, meta: dict) -> str:
-    """A real link to the capability's Jira issue, for the level-2 detail head
+def capability_jama_html(slug: str, meta: dict) -> str:
+    """A real link to the capability's Jama item, for the level-2 detail head
     where there is no enclosing button to conflict with."""
-    jira = meta.get(slug, {}).get("jira_key", "")
-    if not jira:
+    jama = meta.get(slug, {}).get("jama_url", "")
+    if not jama:
         return ""
-    return (f'<a class="cap-jira" href="{JIRA_BROWSE}{esc_html(jira)}" '
-            f'target="_blank" rel="noopener">{esc_html(jira)} &#8599;</a>')
-
+    return (f'<a class="cap-jama" href="{esc_html(jama)}" '
+            f'target="_blank" rel="noopener">Jama &#8599;</a>')
 
 def group_by_capability(records: list[dict]) -> dict[str, list[dict]]:
     by_capability: dict[str, list[dict]] = {}
@@ -795,7 +862,7 @@ def render_cards(records: list[dict], meta: dict) -> str:
         code_html = ("" if cap == UNASSIGNED
                      else f'<code class="detail-code">'
                           f'{esc_html(capability_code(cap, meta))}</code>'
-                          + capability_jira_html(cap, meta))
+                          + capability_jama_html(cap, meta))
         out.append(f'<section class="cap-detail" hidden '
                    f'data-capability="{esc_html(cap)}">')
         out.append(
@@ -1015,7 +1082,7 @@ HTML_TEMPLATE = r"""<!doctype html>
   .detail-code { font-size: .74rem; background: var(--chip); border-radius: 999px;
                  padding: .1rem .45rem; }
   .detail-n { color: var(--muted); font-size: .8rem; }
-  .cap-jira { font-size: .76rem; font-weight: 600; text-decoration: none; }
+  .cap-jama { font-size: .76rem; font-weight: 600; text-decoration: none; }
   .detail-head .cap { flex-basis: 100%; }
   .back { font: inherit; font-size: .82rem; padding: .2rem .55rem; cursor: pointer;
           color: var(--fg); background: var(--bg); border: 1px solid var(--line);
@@ -1461,10 +1528,10 @@ def main() -> None:
                          "or auto = vendor when the bundle exists (default)")
     ap.add_argument("--mermaid-bundle", default=DEFAULT_MERMAID_BUNDLE,
                     help="path to the mermaid UMD bundle (default: %(default)s)")
-    ap.add_argument("--capability-jira", default=DEFAULT_CAP_JIRA,
+    ap.add_argument("--capability-jama", default=DEFAULT_CAP_JAMA,
                     help="TRANSITIONAL fallback: JSON map of capability slug -> "
                          "Jira Initiative key, used only for capreq files that "
-                         "do not yet carry `jira-key` in their frontmatter")
+                         "do not yet carry `jama-id` in their frontmatter")
     ap.add_argument("--meta-cache", default=DEFAULT_META_CACHE,
                     help="where the resolved capability titles are cached so runs "
                          "without --vmodel still render labels")
@@ -1472,6 +1539,9 @@ def main() -> None:
 
     # --team is a preset: it fills whatever the caller did not state explicitly,
     # so the registry stays the single place a sheet id or output path is defined.
+    # Only a registry entry can say what the sheet behind an id should be
+    # called; a bare --sheet-id has nothing to assert against.
+    expect_name = None
     if args.team:
         try:
             cfg = team_registry.team(args.team)
@@ -1487,6 +1557,7 @@ def main() -> None:
             return
         if args.sheet_id == DEFAULT_SHEET_ID and cfg["sheet_id"] is not None:
             args.sheet_id = cfg["sheet_id"]
+            expect_name = cfg.get("sheet_name")
         if args.sheet_url == SHEET_URL:
             args.sheet_url = cfg["sheet_url"]
         if args.title == DEFAULT_TITLE:
@@ -1506,15 +1577,19 @@ def main() -> None:
                 if os.path.isfile(team_registry.abspath(o["snapshot"]))
             ]
 
-    meta = merge_capability_jira(
-        load_capability_meta(args.vmodel, args.meta_cache), args.capability_jira)
+    meta = merge_capability_jama(
+        load_capability_meta(args.vmodel, args.meta_cache), args.capability_jama)
     if not args.live and not args.csv:
         ap.error("pick a data source: --live, --csv PATH, or --team (which "
                  "defaults to that team's committed snapshot)")
-    records = load_live(args.sheet_id) if args.live else load_csv(args.csv)
+    records = (load_live(args.sheet_id, expect_name) if args.live
+               else load_csv(args.csv))
     records = [r for r in records if r["Epic"].strip()]
     if not records:
         sys.exit("ERROR: no rows with an Epic id - nothing to render.")
+    # Before anything counts or keys off an Epic id, make it unique. Everything
+    # downstream assumes that and none of it would say so if it were false.
+    records = drop_duplicate_epics(records)
 
     records_by_epic = {r["Epic"].strip(): r for r in records}
     cross = load_cross_reference(args.cross_reference)

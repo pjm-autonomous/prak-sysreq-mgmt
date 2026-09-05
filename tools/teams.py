@@ -16,6 +16,13 @@ A team with sheet_id None is registered but not yet onboarded: its container
 exists, WORKFLOW.md steps 12-14 have not run, and there is no snapshot to build
 from. The generators say so plainly rather than failing on a missing file.
 
+sheet_id is the connection key - every API call resolves by id, never by URL.
+sheet_name is an assertion, not an address: load_live compares it against the
+name the API reports and says so on stderr when they diverge, which is how a
+sheet swapped underneath an id, or a rename that orphans the schema's per-sheet
+formula block, becomes visible instead of silent. sheet_url is for the links on
+the generated pages and nothing else. Re-key both when a sheet is renamed.
+
 Run this module directly to print the registry.
 """
 from __future__ import annotations
@@ -29,7 +36,7 @@ ROOT = os.path.normpath(os.path.join(_HERE, ".."))
 # have in common, so it does not live in any one team's container.
 SHARED_DIR = "data/shared"
 CAPABILITY_META = f"{SHARED_DIR}/capability-meta.json"
-CAPABILITY_JIRA = f"{SHARED_DIR}/capability-jira.json"
+CAPABILITY_JAMA = f"{SHARED_DIR}/capability-jama.json"
 
 
 def _paths(slug: str, basename: str = "dependency-dag") -> dict:
@@ -49,21 +56,22 @@ TEAMS: dict[str, dict] = {
         "name": "Embedded-Core",
         "title": "Embedded-Core Epic Dependency DAG",
         "jira": "VSP-Embedded, project MCHTRNCS",
-        # Tracker of record moved 2026-08-31 to the sheet David Hayes owns, so
-        # the team maintains one sheet rather than two. It carries the same 87
-        # epics plus 187 story rows indented beneath them - the generators read
-        # epics only, see load_live's parentId guard.
+        # Tracker of record consolidated 2026-08-31 onto this sheet, so the team
+        # maintains one rather than two. It carries the same 87 epics plus 187
+        # story rows indented beneath them - the generators read epics only, see
+        # load_live's parentId guard.
         #
-        # We hold EDITOR on it, not ADMIN: cell values are writable, column
-        # structure is not. Two changes are pending with him - the Epic Total
-        # column formula (points are not days) and the Blocking Epics ->
-        # Blocking Issues rename, which COLUMN_ALIASES covers meanwhile.
+        # OWNED by c00236@contractor.asirobots.com, in workspace
+        # prak-sysreq-decomposition. David Hayes holds ADMIN and granted us ADMIN
+        # on 2026-08-31, so column structure is writable, not just cell values.
+        # Nothing on this sheet is blocked on someone else's permission.
         #
         # Previous ids: 8066207570677636 (pre-reconfiguration), and
         # 5240263122308996, now renamed archived-prak-embedded-core-epics
         # and moved to an archive folder. That sheet is the basis for the
         # simplified template the remaining teams onboard from.
         "sheet_id": 7348278000570244,
+        "sheet_name": "Embedded-Core Epic Decomp",
         "sheet_url": ("https://app.smartsheet.com/sheets/"
                       "VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1"),
         "refresh": True,     # has a live tracker the scheduled job can read
@@ -74,8 +82,9 @@ TEAMS: dict[str, dict] = {
         "title": "Electronics Epic Dependency DAG",
         "jira": "Electrical Platform, project ET",
         # Re-created 2026-08-27 with the Embedded tracker; old id
-        # 5660443916849028.
+        # 5660443916849028. Owned by c00236@contractor.asirobots.com.
         "sheet_id": 2558444740497284,
+        "sheet_name": "prak-electronics-epics",
         "sheet_url": ("https://app.smartsheet.com/sheets/"
                       "f8xHmwRmFc62R5QCVM6p9ffMrVrrgJm64FMrp8x1"),
         "refresh": True,
@@ -90,6 +99,7 @@ TEAMS: dict[str, dict] = {
         "title": "ODOA Epic Dependency DAG",
         "jira": "ODOA Platform, project ODOA",
         "sheet_id": None,
+        "sheet_name": None,
         "sheet_url": "",
         "refresh": False,
     },
@@ -99,6 +109,7 @@ TEAMS: dict[str, dict] = {
         "title": "GNC Epic Dependency DAG",
         "jira": "GNC Platform, project GNC",
         "sheet_id": None,
+        "sheet_name": None,
         "sheet_url": "",
         "refresh": False,
     },
@@ -108,6 +119,7 @@ TEAMS: dict[str, dict] = {
         "title": "Mobius Epic Dependency DAG",
         "jira": "Mobius Platform, project MP",
         "sheet_id": None,
+        "sheet_name": None,
         "sheet_url": "",
         "refresh": False,
     },
@@ -123,6 +135,7 @@ TEAMS[EXAMPLE] = {
     "title": "Example Epic Dependency DAG",
     "jira": "illustrative only",
     "sheet_id": None,
+    "sheet_name": None,
     "sheet_url": "",
     "refresh": False,
     "note": ("ILLUSTRATIVE EXAMPLE - the edges below are sample dependencies, "
