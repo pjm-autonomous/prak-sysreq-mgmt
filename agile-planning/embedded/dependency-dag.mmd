@@ -22,11 +22,9 @@ flowchart TB
   end
   subgraph sg_path_execution_and_objectives_translation["path-execution-and-objectives-translation"]
     direction TB
-    n_epic_cancel_command_response["Objective Mission Cancel<br/>Command Response"]
     n_epic_objectives_reception["Objectives Reception<br/><small>MCHTRNCS-273</small>"]
     n_epic_stop_on_path_deviation["Stop on Path Deviation<br/>(GeoFence)<br/><small>MCHTRNCS-207</small>"]
   end
-  n_external_PAT_413 --> n_epic_cancel_command_response
   n_external_MP_4575 --> n_epic_continuous_geofence_enforcement
   n_external_PAT_413 --> n_epic_objectives_reception
   n_external_MP_4575 --> n_epic_objectives_reception
@@ -38,8 +36,6 @@ flowchart TB
   class n_epic_continuous_geofence_enforcement estimated;
   class n_external_MP_4575 external;
   class n_external_PAT_413 external;
-  class n_epic_cancel_command_response must_tts;
-  class n_epic_cancel_command_response estimated;
   class n_epic_objectives_reception should;
   class n_epic_stop_on_path_deviation must_tts;
   class n_epic_stop_on_path_deviation estimated;
