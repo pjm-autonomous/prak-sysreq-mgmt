@@ -11,8 +11,8 @@ layer. Each team owns a container - `data/<slug>/` for its snapshot,
 
 | Team | Slug | Epics | Jira | Tracker of record |
 |------|------|------:|------|-------------------|
-| Embedded-Core | `embedded` | 87 | project `MCHTRNCS`, team VSP-Embedded | Smartsheet `7348278000570244` |
-| Electronics | `electronics` | 15 | project `ET`, team Electrical Platform | Smartsheet `2558444740497284` |
+| Embedded-Core | `embedded` | 87 | project `MCHTRNCS`, team VSP-Embedded | `Embedded-Core Epic Decomp`, sheet `7348278000570244` |
+| Electronics | `electronics` | 15 | project `ET`, team Electrical Platform | `prak-electronics-epics`, sheet `2558444740497284` |
 | ODOA | `odoa` | - | project `ODOA`, ODOA Platform | none yet |
 | GNC | `gnc` | - | project `GNC`, GNC Platform | none yet |
 | Mobius | `mobius` | - | project `MP`, Mobius Platform | none yet |
@@ -34,10 +34,24 @@ there unless a team chooses to add stories. Copy it, name the copy
 `prak-<slug>-epics`, and run `tools/validate_tracker.py --sheet-id <id>`
 before adding the registry entry.
 
-All are registered in `tools/teams.py`. **That is the only place a sheet id, URL,
-title, or team path belongs** - every generator reads it, and the per-team paths
-are derived from the slug. Adding a team means adding one entry there and nothing
-else.
+All are registered in `tools/teams.py`. **That is the only place a sheet id, name,
+URL, title, or team path belongs** - every generator reads it, and the per-team
+paths are derived from the slug. Adding a team means adding one entry there and
+nothing else.
+
+**`sheet_id` addresses; `sheet_name` asserts; `sheet_url` only decorates.** Every
+API call resolves by id - a URL is never used to reach a sheet. Because an id is
+opaque, `load_live` compares the name the API reports against the registry's
+`sheet_name` and warns on stderr when they diverge, so a sheet renamed or an id
+repointed shows up instead of reading as a clean pull. `sheet_url` exists solely
+for the links on the generated pages. Rename a sheet and you must re-key two
+places: `sheet_name` here, and the per-sheet block in `tracker-schema.json`
+`formulas`, which is keyed by name and silently checks nothing when it is stale
+(the validator now names that gap).
+
+Smartsheet accounts: everything lives under **`c00236@contractor.asirobots.com`**.
+The older `patrick.mckee-cn47@contractor.asirobots.com` is dead - see
+[CREDENTIALS.md](CREDENTIALS.md).
 
 Every team's epics hang off the same 9 PRD Capability Requirements, which are Jira
 `Initiative` issues (`MCHTRNCS-259`..`-266`, `-268`). **That is the only layer the
@@ -73,7 +87,7 @@ resolves epic ids within a single sheet only.
 | `CREDENTIALS.md` | What each credential reaches, where it lives, when it expires. |
 | `data/<slug>/tracker-snapshot.csv` | That team's snapshot - the 7 columns the generator reads, plus optional `Eval Status` |
 | `data/shared/capability-meta.json` | **Build product.** capreq slug -> `CAP-nn`, title, priority, Jira key. Regenerated from `prak-v-model`. |
-| `data/shared/capability-jira.json` | **Transitional.** Legacy hand-kept slug -> Jira key map; delete once every capreq carries `jira-key`. |
+| `data/shared/capability-jama.json` | **Input, not a build product.** Hand-kept capreq slug -> Jama item id, for the capability links. Delete once every capreq carries `jama-id`. |
 | `data/example/tracker-snapshot.csv` | Same shape with sample edges, for the example render |
 | `agile-planning/<slug>/dependency-dag.*` | That team's generated viewer + Mermaid source |
 | `agile-planning/<slug>/standingagenda.*` | That team's standing meeting agenda |
@@ -160,12 +174,32 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
 - The graph encodes three things at once, on three separate channels: **fill** is
   MoSCoW priority, **border width** is 2TS required, **border colour** is
   `Eval Status = Estimated`. Adding a fourth needs a new channel, not a reuse.
+- **`Story Points` is never typed.** It is a *conditional column* formula:
+  `=IF(JiraType@row = "Epic", SUM(CHILDREN()), ROUNDUP(Duration@row / 2))`. The
+  meeting's input is **`Duration` in days on story rows**; points are derived and
+  rolled up, and the column is locked. Renamed from `Time per Story (points)` on
+  2026-09-01. No generator reads it. Keeping the epic/story split *inside* the IF
+  is what makes a column formula workable - a bare `=SUM(CHILDREN())` column
+  formula would apply to every row.
+- **Points are not days** (1->2, 2->3, 3->5, 5->10, no 4). `ROUNDUP(Duration/2)`
+  inverts that table exactly at 2d/3d/5d/10d, so it is a derivation and not an
+  approximation - but only while Durations stay on that set. 7d yields 4, and
+  there is no 4 on the scale. `Epic Total (days)` was dropped from the contract
+  on 2026-09-01~~; it still exists on the sheet, repurposed to mirror an epic's Duration, and is deliberately unchecked because nothing reads it~~.
+- **Two independent notions of "is this an epic" now exist and must agree.** The
+  generators use row hierarchy (`parentId` live, slug pattern on CSV); the sheet's
+  column formulas use the `JiraType` cell. A row where they disagree computes its
+  numbers on one branch while the graph draws it on the other, silently.
+  `validate_tracker.py --live` cross-checks them.
+- **A duplicate `Epic` id is an error, not a merge.** Every lookup is a dict keyed
+  by that id, so a second row with the same slug takes the graph node while both
+  sit in the inventory and the header counts one epic too many. The generator now
+  keeps the first, names the drop on stderr, and the validator reports it.
 
 ## The capability layer
 
 Everything this repo knows about a capability - the PRD id `CAP-nn`, the human
-title, the MoSCoW priority, and the Jira Initiative key - is read from the
-`capreq-*.md` **frontmatter** in
+title and the MoSCoW priority - is read from the `capreq-*.md` **frontmatter** in
 [`asirobots/prak-v-model`](https://github.com/asirobots/prak-v-model). That repo
 is the source of record; **none of it is maintained by hand here.**
 
@@ -173,25 +207,35 @@ is the source of record; **none of it is maintained by hand here.**
 prak-v-model/product/requirements/product/capreq-motion-authorization.md
 ---
 id: capreq-motion-authorization
-prd-id: CAP-01            -> cap_id
+prd-id: CAP-01              -> cap_id
 title: Motion Authorization -> title
-priority: Must Have       -> priority
-jira-key: MCHTRNCS-259    -> jira_key   (NOT UPSTREAM YET - see below)
+priority: Must Have         -> priority
+jama-id: 12345              -> jama_id   (NOT UPSTREAM YET - see below)
 ---
 ```
 
-**`jira-key` is not in `prak-v-model` `main` yet.** The reader supports it, but
-the field is queued behind an open PR, so today all 9 Jira keys still come from
-the transitional `capability-jira.json` and every build says so on stderr:
+**The capability's issue link is Jama, not Jira, as of 2026-09-05.** Jira
+Initiatives, Objectives and Epics are being retired: ASI DevOps syncs Jama
+`User Story` to Jira `Story` for sprint tracking, and the relationship from a
+story up to the PRAK System Requirement it supports lives in Jama. There is no
+longer a Jira issue at the capability layer to point at, so the tiles and the
+landing-page capability table link to Jama.
+
+The map is `data/shared/capability-jama.json` - a hand-maintained **input**,
+listing all 15 capabilities. (Jama is the requirements system of record, so every
+capreq exists there; the old 9-of-15 split was a Jira artefact and does not carry
+over.) A value is either a bare item id, substituted into the file's
+`url_template`, or a complete URL used verbatim. Every build names the slugs
+still missing one:
 
 ```
-note: 9 capability Jira key(s) came from the legacy capability-jira.json
-      rather than capreq frontmatter: blackbox-data-off-load-to-cloud, ...
+note: 15 capability tile(s) have no Jama link yet: blackbox-data-off-load-to-cloud, ...
+      Fill them in data/shared/capability-jama.json.
 ```
 
-That note is the signal, not a warning to suppress. When it stops naming a slug,
-that slug's key is coming from the source of record. When it disappears entirely,
-delete `capability-jira.json`.
+`jama-id` in capreq frontmatter **wins** over that file, exactly as `jira-key`
+used to. The reader already supports it, so adding it upstream needs no change
+here - and when every capreq carries it, delete `capability-jama.json`.
 
 `data/shared/capability-meta.json` is a **write-through cache** of that read, not
 an input: when the checkout is present the generator rewrites it. It is committed
@@ -206,18 +250,14 @@ capability labels - and the step after it posts a job-summary warning when the
 checkout did not land, so a silently rotated credential surfaces instead of
 quietly going stale. See TODO.md for what that token currently is and why.
 
-`data/shared/capability-jira.json` predates `jira-key` and is **transitional**,
-but it is load-bearing until the upstream PR lands - do not delete it yet. It
-only fills slugs whose frontmatter has no key, and it names them on stderr when
-it does. Retire it once that note comes back empty.
-
 ## Current state
 
-The Embedded tracker of record moved on 2026-08-31 to the sheet David Hayes
-owns, so the team maintains one sheet rather than two. We hold **Editor** on
-it, not Admin: cell values are writable, column structure is not. Two changes
-are pending with him - the `Epic Total (days)` column formula and the
-`Blocking Epics` -> `Blocking Issues` rename - and neither blocks the build.
+The Embedded tracker of record consolidated on 2026-08-31 onto
+`Embedded-Core Epic Decomp` (sheet `7348278000570244`, workspace
+`prak-sysreq-decomposition`), so the team maintains one sheet rather than two.
+**We own it** - `c00236@contractor.asirobots.com` is Owner, David Hayes is Admin,
+and he granted us Admin on 2026-08-31. Column structure is writable, not just
+cell values, so nothing on this sheet is blocked on someone else's permission.
 
 Embedded-Core and Electronics are live: 102 epics, 62 evaluated, with the first blockers
 recorded (Embedded 2 hard edges; Electronics 1 hard + 8 soft, 9 of them still

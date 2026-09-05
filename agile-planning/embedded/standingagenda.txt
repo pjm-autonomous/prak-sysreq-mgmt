@@ -1,22 +1,22 @@
 PRAK Embedded Epic Decomposition — Standing Meeting
 
-Purpose: Working sessions to evaluate & decompose the 87 Embedded-Core (VSP-Embedded) PRAK epics into stories with time estimates and dependencies. Data collection only — artifacts are produced outside the meeting.
+Purpose: Working sessions to evaluate & decompose the 87 Embedded-Core (VSP-Embedded) PRAK epics into stories with point estimates and dependencies. Data collection only — artifacts are produced outside the meeting.
 
 Roles (RACI) — this meeting runs two threads; Clint's role differs between them:
-• Estimation & decomposition (data): Accountable — Patrick McKee (owns tracker + outputs; editor). Responsible — Michael Anderson (SME: estimates, story breakdown, owner assignment; editor). Consulted — David Hayes (capacity/feasibility). Informed — Clint Jones.
+• Estimation & decomposition (data): Accountable — Patrick McKee (Owner of the tracker + outputs). Responsible — Michael Anderson (SME: estimates, story breakdown, owner assignment; editor). Consulted — David Hayes (capacity/feasibility). Informed — Clint Jones.
 • 2TS scope & priority (decision): Accountable — Clint Jones (PRAK PM owns 2TS scope). Consulted — David Hayes, Michael Anderson. Responsible — Patrick McKee (facilitate + record). Informed — Chris Mann (via David).
 
-Estimation unit: all estimates in DAYS — keeps the tracker's Epic-total roll-up consistent (no story points).
+Estimation unit: capture DURATION IN DAYS on each story row. Story Points are DERIVED, not typed — the tracker computes ROUNDUP(Duration / 2) per story and sums them onto the epic, and the column is locked. Keep Durations on 2 / 3 / 5 / 10 days, which map exactly to 1 / 2 / 3 / 5 points; an off-scale duration yields an off-scale point value (7d gives 4, and there is no 4 on the scale).
 
-Tracker (live — we capture directly here): https://app.smartsheet.com/sheets/gjWCc9QwjFV5qw57vcMf9f9rc4qmXMJvVPrx6VQ1
+Tracker (live — we capture directly here): https://app.smartsheet.com/sheets/VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1  (Embedded-Core Epic Decomp, sheet 7348278000570244)
 
 Epic Evaluation Loop (~4 min/epic):
 1. System requirement clear after reading the epic? If not, mark needs-info and move on.
 2. Required for 2TS? If yes, set priority rank.
 3. How many stories to deliver this epic? Capture count + story titles (Michael assigns later for finer breakdown).
-4. Estimate time per story in DAYS.
-5. Roll-up (auto = story count × days/story).
-6. Blocking epics by ID — hard (can't start) vs soft (can start, can't finish); note cross-team blockers (GNC/ODOA) for capability-level coordination.
+4. Set Duration in days on each story row (2/3/5/10).
+5. Story Points and the epic roll-up are automatic — do not type either.
+6. Blocking Issues by ID — hard (can't start) vs soft (can start, can't finish); note cross-team blockers (GNC/ODOA) for capability-level coordination.
 
 Agenda:
 0:00–0:05  (1) Epic batch selection — confirm ~10 pre-selected epics; set target count.
@@ -25,4 +25,4 @@ Agenda:
 0:50–0:57  (4) Assignment & uncertainty — Michael assigns epic owners; flag IC follow-ups.
 0:57–1:00  (5) Loop evaluation — completion rate vs plan, adjust schedule, review assignments.
 
-Output per meeting: ~10 epics with refined day estimates, story count/breakdown, and blocking-epic dependencies.
+Output per meeting: ~10 epics with a Duration on every child story row, child story title, and recorded Blocking Issues.

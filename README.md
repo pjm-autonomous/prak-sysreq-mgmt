@@ -25,16 +25,16 @@ Do not hand-edit a tracker snapshot; the scheduled refresh overwrites it.
 | Scheduled refresh | Three times each weekday, 07:00 / 12:00 / 17:00 Mountain |
 | Credentials | `SMARTSHEET_ACCESS_TOKEN` and `VMODEL_READ_TOKEN` both set — see [CREDENTIALS.md](CREDENTIALS.md) |
 
-The Embedded tracker of record is the sheet **David Hayes owns**
-(`7348278000570244`). It is hierarchical — 187 story rows indented under 46 of
-its 87 epics — and the generators read epics only. Electronics is flat. The
-previous Embedded sheet is archived as `archived-prak-embedded-core-epics` and
-becomes the basis for the simplified template ODOA, GNC and Mobius onboard from.
+The Embedded tracker of record is **`Embedded-Core Epic Decomp`**
+(`7348278000570244`, workspace `prak-sysreq-decomposition`). It is hierarchical —
+187 story rows indented under 46 of its 87 epics — and the generators read epics
+only. Electronics is flat. The previous Embedded sheet is archived as
+`archived-prak-embedded-core-epics` and becomes the basis for the simplified
+template ODOA, GNC and Mobius onboard from.
 
-We hold **Editor** on the Embedded tracker, not Admin: cell values are writable,
-column structure is not. Two changes are pending with its owner — the
-`Epic Total (days)` column formula and the `Blocking Epics` → `Blocking Issues`
-rename. Neither blocks the build.
+**We own that tracker.** `c00236@contractor.asirobots.com` is Owner and David
+Hayes is Admin; he granted us Admin on 2026-08-31. Column structure is writable,
+not just cell values — no change to it waits on anyone else.
 
 Tooling added this cycle: `tools/validate_tracker.py` (checks a tracker, or any
 sheet, against `data/shared/tracker-schema.json`), a cross-team dependency table
@@ -49,7 +49,8 @@ changes. Nothing here is hand-drawn — re-run the generator and the diagram
 reflects current sheet state.
 
 - **Tracker (source of truth):** [Embedded-Core Epic Decomp](https://app.smartsheet.com/sheets/VH9Xph6WX472HPP699HWXHg9hRGFXXh88w5j3Jq1)
-  &mdash; owned by David Hayes; we hold Editor, not Admin.
+  &mdash; sheet id `7348278000570244`. Owned by `c00236@contractor.asirobots.com`;
+  David Hayes is Admin.
 - **Generator:** [`tools/build_dependency_dag.py`](tools/build_dependency_dag.py)
 - **Artifacts:** [`agile-planning/embedded/`](agile-planning/embedded/)
 
@@ -89,9 +90,11 @@ checkout named by `--vmodel` (default `../prak-v-model`), which supplies the
 `data/shared/capability-meta.json`, so a checkout without that repo still renders labels
 instead of bare slugs — and says on stderr that it did.
 
-That frontmatter is also where each capability's **Jira Initiative key** comes
-from (`jira-key: MCHTRNCS-259`), so `prak-v-model` is the single source of record
-for a capability's id, title, priority, and Jira identity. Nothing about a
+Each capability also links out to its item in **Jama** — `data/shared/capability-jama.json`
+maps the capreq slug to a Jama item id. Jira Initiatives were retired on
+2026-09-05 along with Jira Epics and Objectives, so Jama is the single place that
+layer exists as an item. `prak-v-model` remains the single source of record
+for a capability's id, title and priority. Nothing about a
 capability is hand-maintained in this repo; `capability-meta.json` is a
 write-through cache, not an input.
 
@@ -101,7 +104,7 @@ All 87 epics are mapped to one of 9 capabilities; there is no unassigned group.
 
 Each edge comes from the tracker's **Blocking Issues** column. For a given epic,
 list the epics that must progress first, comma/newline/semicolon separated;
-each token is an epic id (`epic-<slug>`) or a Jira key (`MCHTRNCS-###`),
+each token is an epic id (`epic-<slug>`) or a Jira key (e.g., `MCHTRNCS-###`),
 optionally tagged `(hard)` or `(soft)`:
 
 ```text
@@ -139,6 +142,7 @@ Dependency graph of the 15 Electronics (`ET-*`) PRAK epics, generated from the
 live Smartsheet tracker so it re-populates whenever the sheet changes.
 
 - **Tracker (source of truth):** [prak-electronics-epics](https://app.smartsheet.com/sheets/f8xHmwRmFc62R5QCVM6p9ffMrVrrgJm64FMrp8x1)
+  &mdash; sheet id `2558444740497284`.
 - **Generator:** `tools/build_dependency_dag.py --team electronics`
 - **Artifacts:** [`agile-planning/electronics/`](agile-planning/electronics/)
 
