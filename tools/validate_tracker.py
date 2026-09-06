@@ -33,6 +33,9 @@ sys.path.insert(0, _HERE)
 import teams as team_registry  # noqa: E402
 from build_dependency_dag import (  # noqa: E402
     ALL_COLS,
+    canonical_capability,
+    capability_aliases,
+    merge_capability_jama,
     capability_of,
     load_capability_meta,
     load_csv,
@@ -82,6 +85,7 @@ def check_rows(rows: list[dict], schema: dict, meta: dict, report: Report,
                known_epics: set[str], elsewhere: dict[str, str]) -> None:
     """Validate the data a snapshot carries."""
     required = schema["required"]
+    aliases = capability_aliases(meta)
     seen_epic: dict[str, int] = {}
     seen_key: dict[str, int] = {}
 
@@ -118,7 +122,9 @@ def check_rows(rows: list[dict], schema: dict, meta: dict, report: Report,
                 report.error(f"row {i}: {col} {value!r} not one of {options}")
 
         # Capability must resolve, or the epic lands in "No parent capability".
-        cap = capability_of(row)
+        # A tracker may spell it as the capreq slug or as the Jama document key;
+        # both canonicalise to the slug, same as the generator does.
+        cap = canonical_capability(capability_of(row), aliases)
         if not row.get("Capability", "").strip():
             report.warn(f"row {i}: {epic} has no Capability - it will group under "
                         f"'No parent capability'")
@@ -265,8 +271,10 @@ def validate_source(label: str, rows: list[dict], vmodel: str,
     report = Report(label)
     schema = load_schema()
     rows = [r for r in rows if r.get("Epic", "").strip()]
-    meta = load_capability_meta(vmodel, team_registry.abspath(
-        team_registry.CAPABILITY_META))
+    meta = merge_capability_jama(
+        load_capability_meta(vmodel, team_registry.abspath(
+            team_registry.CAPABILITY_META)),
+        team_registry.abspath(team_registry.CAPABILITY_JAMA))
     known = {r["Epic"].strip() for r in rows}
     elsewhere = {}
     for other in cross:
@@ -313,8 +321,10 @@ def validate(slug: str, live: bool, vmodel: str) -> Report:
     rows = (load_live(cfg["sheet_id"]) if live
             else load_csv(team_registry.abspath(cfg["snapshot"])))
     rows = [r for r in rows if r.get("Epic", "").strip()]
-    meta = load_capability_meta(vmodel, team_registry.abspath(
-        team_registry.CAPABILITY_META))
+    meta = merge_capability_jama(
+        load_capability_meta(vmodel, team_registry.abspath(
+            team_registry.CAPABILITY_META)),
+        team_registry.abspath(team_registry.CAPABILITY_JAMA))
     known = {r["Epic"].strip() for r in rows}
     # Every other team's epics, so a cross-tracker blocker resolves instead of
     # being reported. This mirrors what build_dependency_dag does with

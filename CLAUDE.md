@@ -138,9 +138,18 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
   indistinguishable from a real cross-team dependency - that is exactly what
   `Unknown` did on 2026-08-27. The validator resolves blockers across *every*
   tracker, so a legitimate cross-team reference is silent.
-- The tracker's grouping column is **`Capability`**, holding a **capreq slug**
-  (the capreq filename with `capreq-` dropped). It was renamed from `Initiative`
-  on 2026-08-18. The slug resolves to `capreq-<slug>.md` in `prak-v-model`.
+- The tracker's grouping column is **`Capability`**. It accepts **two spellings**
+  and canonicalises to the capreq slug at load, exactly as `COLUMN_ALIASES` does
+  for a renamed header:
+    - a **capreq slug** (the capreq filename with `capreq-` dropped), which
+      resolves to `capreq-<slug>.md` in `prak-v-model`; and
+    - a **Jama document key** (`PLAT3-PRD_Rqmts-4269`), which the trackers moved
+      to on 2026-09-05 because Smartsheet can hyperlink a key straight into Jama.
+  The key is an alias, not an identity: `capability-jama.json` maps it back, and
+  the slug is still what resolves to the CAP-nn id, title and priority. Without
+  that mapping every tile degrades to a raw key and every row fails validation -
+  which is exactly what happened when the column was repointed. Renamed from
+  `Initiative` on 2026-08-18.
 - Electronics epics are project **`ET`**, not `MCHTRNCS`. A Jira search scoped to
   `MCHTRNCS` will not find them - this already caused one wrong conclusion.
 - `Blocking Issues` direction is **blocker -> dependent**. `(hard)` means cannot

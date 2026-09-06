@@ -1,49 +1,96 @@
 {
   "_comment": [
-    "capreq slug -> the capability requirement's identifier in Jama Connect.",
+    "capreq slug -> that capability requirement in Jama Connect. Two facts per",
+    "capability, and they do different jobs:",
     "",
-    "Replaces capability-jira.json, deleted 2026-09-05. Jira Initiatives,",
-    "Objectives and Epics are being retired: ASI DevOps now syncs Jama",
-    "'User Story' to Jira 'Story' for sprint tracking, and the relationship from",
-    "a story up to the PRAK System Requirement it supports lives in Jama. The",
-    "capability layer has no Jira issue to point at any more, so the tiles and",
-    "the landing-page capability table point at Jama instead.",
+    "  jama_key  the document key, e.g. PLAT3-PRD_Rqmts-4269. This is what the",
+    "            trackers' Capability column now holds, so it is an ALIAS for the",
+    "            capreq slug: load_capability_aliases turns it back into the slug",
+    "            before anything groups, counts or renders. Without it every tile",
+    "            degrades to a raw key and every row fails validation.",
+    "  item_id   the numeric id in the Jama URL, e.g. 7466995. Substituted into",
+    "            url_template to make the tile link. A complete URL may be given",
+    "            instead and is used verbatim.",
     "",
-    "ALL 15 capabilities are listed, not the 9 that had a Jira Initiative. Jama",
-    "is the requirements system of record, so every capreq exists there; the",
-    "9/15 split was a Jira artefact and does not carry over.",
+    "Either may be empty. An empty jama_key just means no tracker uses that key",
+    "yet; an empty item_id renders the tile unlinked. Both are named on stderr.",
     "",
-    "This is a hand-maintained INPUT, like tracker-schema.json - not a build",
-    "product. It is the one thing about a capability prak-v-model does not yet",
-    "carry; cap_id, title and priority are all read from capreq frontmatter. If a",
-    "`jama-id` field is added to that frontmatter the reader already prefers it",
-    "and this file can be deleted, exactly as capability-jira.json was.",
+    "Replaces capability-jira.json, deleted 2026-09-05, when Jira Initiatives,",
+    "Objectives and Epics were designated for removal. ASI DevOps syncs Jama",
+    "'User Story' to Jira 'Story' for sprint boards, and the story-to-System-",
+    "Requirement relationship lives in Jama - so Jama is the only place the",
+    "capability layer still exists as an item.",
     "",
-    "A value may be a bare Jama item id, substituted into url_template, or a",
-    "complete URL, used verbatim. Bare ids are preferred - one place to change if",
-    "the Jama host or perspective ever moves. An empty value renders the tile",
-    "with no link and is named on stderr.",
+    "All 15 capabilities are listed, not the 9 that had a Jira Initiative: Jama is",
+    "the requirements system of record, so every capreq exists there. Only 9 have",
+    "a jama_key because only 9 are referenced by a tracker today.",
     "",
-    "In Jama a capability requirement is keyed by its prd-id (CAP-nn) and a system",
-    "requirement by its sysreq slug in the External ID field - see the",
-    "jama-import-workbooks skill in prak-v-model."
+    "Hand-maintained INPUT, like tracker-schema.json - not a build product. It is",
+    "the one thing about a capability prak-v-model does not yet carry; cap_id,",
+    "title and priority all come from capreq frontmatter. Add `jama-id` there and",
+    "the reader prefers it, exactly as it did for jira-key - then delete this file."
   ],
-  "url_template": "https://autonomoussolutions.jamacloud.com/perspective.req#/items/{id}",
+  "url_template": "https://autonomoussolutions.jamacloud.com/perspective.req#/items/{id}?projectId=156",
   "items": {
-    "blackbox-data-off-load-to-cloud": "",
-    "developer-tooling-update-path": "",
-    "framework-packaging-extension-and-integration": "",
-    "motion-authorization": "",
-    "observable-runtime-state": "",
-    "obstacle-detection-and-avoidance": "",
-    "path-execution-and-objectives-translation": "",
-    "perception-for-manipulation": "",
-    "remote-all-stop-safety-capability": "",
-    "robot-localization": "",
-    "robot-web-application": "",
-    "software-update-and-rollback": "",
-    "tele-operation": "",
-    "vehicle-kinematics-support": "",
-    "video-recording-and-streaming": ""
+    "blackbox-data-off-load-to-cloud": {
+      "jama_key": "PLAT3-PRD_Rqmts-4268",
+      "item_id": ""
+    },
+    "developer-tooling-update-path": {
+      "jama_key": "",
+      "item_id": ""
+    },
+    "framework-packaging-extension-and-integration": {
+      "jama_key": "PLAT3-PRD_Rqmts-4274",
+      "item_id": ""
+    },
+    "motion-authorization": {
+      "jama_key": "PLAT3-PRD_Rqmts-4269",
+      "item_id": ""
+    },
+    "observable-runtime-state": {
+      "jama_key": "PLAT3-PRD_Rqmts-4276",
+      "item_id": ""
+    },
+    "obstacle-detection-and-avoidance": {
+      "jama_key": "PLAT3-PRD_Rqmts-4270",
+      "item_id": ""
+    },
+    "path-execution-and-objectives-translation": {
+      "jama_key": "PLAT3-PRD_Rqmts-4271",
+      "item_id": ""
+    },
+    "perception-for-manipulation": {
+      "jama_key": "",
+      "item_id": ""
+    },
+    "remote-all-stop-safety-capability": {
+      "jama_key": "PLAT3-PRD_Rqmts-4272",
+      "item_id": ""
+    },
+    "robot-localization": {
+      "jama_key": "",
+      "item_id": ""
+    },
+    "robot-web-application": {
+      "jama_key": "",
+      "item_id": ""
+    },
+    "software-update-and-rollback": {
+      "jama_key": "",
+      "item_id": ""
+    },
+    "tele-operation": {
+      "jama_key": "PLAT3-PRD_Rqmts-4275",
+      "item_id": ""
+    },
+    "vehicle-kinematics-support": {
+      "jama_key": "PLAT3-PRD_Rqmts-4273",
+      "item_id": ""
+    },
+    "video-recording-and-streaming": {
+      "jama_key": "",
+      "item_id": ""
+    }
   }
 }

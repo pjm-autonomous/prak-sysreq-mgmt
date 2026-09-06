@@ -233,31 +233,36 @@ def load_capability_meta(vmodel_dir: str, cache_path: str) -> dict:
 
 
 def merge_capability_jama(meta: dict, path: str) -> dict:
-    """Resolve each capability to a Jama URL, from capability-jama.json.
+    """Attach each capability's Jama identity, from capability-jama.json.
 
-    A capability requirement is the one layer every team's tracker shares, so it
-    is the only place a cross-team reader can go to see the whole picture. That
-    used to be a Jira Initiative; Initiatives are being retired along with Jira
-    Epics and Objectives, so the target is now the capreq's item in Jama.
+    Two facts per capability, doing different jobs. `item_id` becomes jama_url,
+    the tile's link. `jama_key` is the document key the trackers' Capability
+    column now holds, kept so canonical_capability() can turn it back into a
+    capreq slug - see that function for why the build depends on it.
 
     Frontmatter wins, as it did for the Jira key: a `jama-id` read from the
-    capreq is preferred over anything in this file, so the file can be deleted
-    once prak-v-model carries the field. A value may be a bare item id
-    (substituted into url_template) or a complete URL (used verbatim).
+    capreq is preferred over item_id here, so this file retires the same way its
+    Jira predecessor did. A value may be a bare id or a complete URL.
     """
     try:
         with open(path, encoding="utf-8") as fh:
             doc = json.load(fh)
     except (OSError, ValueError):
         print(f"note: no capability Jama map at {path}; capability tiles will "
-              f"render without a link", file=sys.stderr)
+              f"render without a link, and a tracker holding Jama document keys "
+              f"in its Capability column will not resolve", file=sys.stderr)
         doc = {}
     template = doc.get("url_template", "")
     items = doc.get("items", {})
 
     unlinked = []
     for slug, entry in meta.items():
-        raw = str(entry.get("jama_id") or items.get(slug, "")).strip()
+        spec = items.get(slug) or {}
+        if isinstance(spec, str):          # tolerated: the flat "id" form
+            spec = {"item_id": spec}
+        if spec.get("jama_key"):
+            entry["jama_key"] = spec["jama_key"]
+        raw = str(entry.get("jama_id") or spec.get("item_id", "")).strip()
         if raw.startswith("http://") or raw.startswith("https://"):
             entry["jama_url"] = raw
         elif raw and template:
@@ -270,9 +275,33 @@ def merge_capability_jama(meta: dict, path: str) -> dict:
                   file=sys.stderr)
     if unlinked:
         print(f"note: {len(unlinked)} capability tile(s) have no Jama link yet: "
-              f"{', '.join(sorted(unlinked))}. Fill them in "
+              f"{', '.join(sorted(unlinked))}. Fill in item_id in "
               f"{os.path.relpath(path, team_registry.ROOT)}.", file=sys.stderr)
     return meta
+
+
+def capability_aliases(meta: dict) -> dict:
+    """Jama document key -> capreq slug, for every capability that has one."""
+    return {entry["jama_key"].strip().casefold(): slug
+            for slug, entry in meta.items() if entry.get("jama_key")}
+
+
+def canonical_capability(value: str, aliases: dict) -> str:
+    """Normalise a tracker's Capability cell to a capreq slug.
+
+    The column used to hold the slug outright. On 2026-09-05 the trackers moved
+    to the Jama document key (PLAT3-PRD_Rqmts-4269), because a key is what
+    Smartsheet can hyperlink straight into Jama - which is genuinely better for
+    the people editing the sheet, and completely opaque to this repo, where the
+    slug is what resolves to capreq frontmatter for the CAP-nn id, the title and
+    the priority.
+
+    So both spellings are accepted and canonicalised here, exactly as
+    COLUMN_ALIASES does for a renamed header: one conversion at the edge, and
+    everything downstream keeps grouping, counting and rendering by slug. An
+    unrecognised value passes through untouched so the validator can name it.
+    """
+    return aliases.get(value.strip().casefold(), value)
 
 def smartsheet_get(path: str, token: str, timeout: int = 60) -> dict:
     """GET one Smartsheet API path, retrying transient failures.
@@ -1590,6 +1619,10 @@ def main() -> None:
     # Before anything counts or keys off an Epic id, make it unique. Everything
     # downstream assumes that and none of it would say so if it were false.
     records = drop_duplicate_epics(records)
+    # Canonicalise Capability before anything groups or counts by it.
+    aliases = capability_aliases(meta)
+    for rec in records:
+        rec["Capability"] = canonical_capability(rec["Capability"], aliases)
 
     records_by_epic = {r["Epic"].strip(): r for r in records}
     cross = load_cross_reference(args.cross_reference)

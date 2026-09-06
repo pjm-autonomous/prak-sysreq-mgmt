@@ -202,7 +202,11 @@ all — it stays at the System Requirement level, which is what it already was.
 
 ### Open
 
-- [ ] **Fill in the 15 Jama item ids** in `data/shared/capability-jama.json`.
+- [ ] **Fill in the `item_id` for each capability** in
+      `data/shared/capability-jama.json` — the numeric id from the Jama URL
+      (`.../perspective.req#/items/7466995?projectId=156` -> `7466995`). The 9
+      `jama_key` values are already recorded, derived by joining the live
+      Capability column against the committed snapshot with zero ambiguity.
       Every build names the slugs still missing one. Until then the tiles render
       the `CAP-nn` chip with no link — which is correct, since the Jira link they
       used to carry is dead. Obtainable via jama-mcp (Claude desktop app; the
