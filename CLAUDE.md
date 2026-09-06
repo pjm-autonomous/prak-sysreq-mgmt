@@ -184,7 +184,7 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
   MoSCoW priority, **border width** is 2TS required, **border colour** is
   `Eval Status = Estimated`. Adding a fourth needs a new channel, not a reuse.
 - **`Story Points` is never typed.** It is a *conditional column* formula:
-  `=IF(JiraType@row = "Epic", SUM(CHILDREN()), ROUNDUP(Duration@row / 2))`. The
+  `=IF(NumChildren@row > 0, SUM(CHILDREN()), ROUNDUP(Duration@row / 2))`. The
   meeting's input is **`Duration` in days on story rows**; points are derived and
   rolled up, and the column is locked. Renamed from `Time per Story (points)` on
   2026-09-01. No generator reads it. Keeping the epic/story split *inside* the IF
@@ -195,11 +195,17 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
   approximation - but only while Durations stay on that set. 7d yields 4, and
   there is no 4 on the scale. `Epic Total (days)` was dropped from the contract
   on 2026-09-01~~; it still exists on the sheet, repurposed to mirror an epic's Duration, and is deliberately unchecked because nothing reads it~~.
-- **Two independent notions of "is this an epic" now exist and must agree.** The
-  generators use row hierarchy (`parentId` live, slug pattern on CSV); the sheet's
-  column formulas use the `JiraType` cell. A row where they disagree computes its
-  numbers on one branch while the graph draws it on the other, silently.
-  `validate_tracker.py --live` cross-checks them.
+- **One notion of "is this an epic": row hierarchy.** The generators use it
+  (`parentId` live, slug pattern on CSV) and, since 2026-09-05, so do the
+  sheet's own column formulas via `NumChildren`. They briefly branched on the
+  `JiraType` cell instead, which meant a row could compute its numbers on one
+  branch while the graph drew it on the other, silently. Keep any new formula
+  on `NumChildren` - and note the sense flips: an epic is `NumChildren > 0`, a
+  story is `NumChildren = 0`. Getting that backwards is what put `ManDays` on
+  the 97 epic rows and left all 375 story rows blank.
+- **`validate_tracker --live` compares formula TEXT, not just presence.** A
+  column that has *a* formula which says the wrong thing is the failure that
+  actually happens; presence was never the interesting question.
 - **A duplicate `Epic` id is an error, not a merge.** Every lookup is a dict keyed
   by that id, so a second row with the same slug takes the graph node while both
   sit in the inventory and the header counts one epic too many. The generator now

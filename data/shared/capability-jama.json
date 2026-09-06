@@ -34,63 +34,63 @@
   "items": {
     "blackbox-data-off-load-to-cloud": {
       "jama_key": "PLAT3-PRD_Rqmts-4268",
-      "item_id": ""
+      "item_id": "7466995"
     },
     "developer-tooling-update-path": {
-      "jama_key": "",
-      "item_id": ""
+      "jama_key": "PLAT3-PRD_Rqmts-4282",
+      "item_id": "7774763"
     },
     "framework-packaging-extension-and-integration": {
       "jama_key": "PLAT3-PRD_Rqmts-4274",
-      "item_id": ""
+      "item_id": "7467743"
     },
     "motion-authorization": {
       "jama_key": "PLAT3-PRD_Rqmts-4269",
-      "item_id": ""
+      "item_id": "7467738"
     },
     "observable-runtime-state": {
       "jama_key": "PLAT3-PRD_Rqmts-4276",
-      "item_id": ""
+      "item_id": "7467745"
     },
     "obstacle-detection-and-avoidance": {
       "jama_key": "PLAT3-PRD_Rqmts-4270",
-      "item_id": ""
+      "item_id": "7467739"
     },
     "path-execution-and-objectives-translation": {
       "jama_key": "PLAT3-PRD_Rqmts-4271",
-      "item_id": ""
+      "item_id": "7467740"
     },
     "perception-for-manipulation": {
-      "jama_key": "",
-      "item_id": ""
+      "jama_key": "PLAT3-PRD_Rqmts-4278",
+      "item_id": "7774754"
     },
     "remote-all-stop-safety-capability": {
       "jama_key": "PLAT3-PRD_Rqmts-4272",
-      "item_id": ""
+      "item_id": "7467741"
     },
     "robot-localization": {
-      "jama_key": "",
-      "item_id": ""
+      "jama_key": "PLAT3-PRD_Rqmts-4279",
+      "item_id": "7774757"
     },
     "robot-web-application": {
-      "jama_key": "",
-      "item_id": ""
+      "jama_key": "PLAT3-PRD_Rqmts-4277",
+      "item_id": "7774752"
     },
     "software-update-and-rollback": {
-      "jama_key": "",
-      "item_id": ""
+      "jama_key": "PLAT3-PRD_Rqmts-4281",
+      "item_id": "7774762"
     },
     "tele-operation": {
       "jama_key": "PLAT3-PRD_Rqmts-4275",
-      "item_id": ""
+      "item_id": "7467744"
     },
     "vehicle-kinematics-support": {
       "jama_key": "PLAT3-PRD_Rqmts-4273",
-      "item_id": ""
+      "item_id": "7467742"
     },
     "video-recording-and-streaming": {
-      "jama_key": "",
-      "item_id": ""
+      "jama_key": "PLAT3-PRD_Rqmts-4280",
+      "item_id": "7774761"
     }
   }
 }

@@ -35,11 +35,11 @@ from build_dependency_dag import (  # noqa: E402
     ALL_COLS,
     canonical_capability,
     capability_aliases,
-    merge_capability_jama,
     capability_of,
     load_capability_meta,
     load_csv,
     load_live,
+    merge_capability_jama,
     parse_blockers,
     smartsheet_get,
 )
@@ -50,6 +50,11 @@ SCHEMA_PATH = team_registry.abspath("data/shared/tracker-schema.json")
 def load_schema(path: str = SCHEMA_PATH) -> dict:
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def _norm_formula(text: str) -> str:
+    """Formulas differ harmlessly in spacing, so compare on the tokens."""
+    return "".join(str(text).split()).casefold()
 
 
 class Report:
@@ -193,45 +198,19 @@ def check_structure(sheet: dict, schema: dict, sheet_name: str,
                         f"anyone editing the sheet, and only a PDF export omits "
                         f"it. Unhide it if the team is meant to maintain it.")
 
-    # JiraType vs row hierarchy. Since 2026-09-01 the sheet's own column
-    # formulas decide epic-vs-story from the JiraType cell, while every
-    # generator here decides it from indentation. When those disagree nothing
-    # errors: the sheet quietly computes the wrong roll-up for that row while
-    # the graph draws it the other way, and both look fine. Only the live sheet
-    # carries parentId, so this cannot be checked from a snapshot.
-    jira_type_col = next((c["id"] for c in sheet["columns"]
-                          if c["title"] == "JiraType"), None)
-    if jira_type_col is not None:
-        for row in sheet.get("rows", []):
-            cells = row.get("cells", [])
-            # A wholly empty row is a spacer, not a fault - the sheet carries a
-            # few and they mean nothing to anyone.
-            if not any(str(c.get("value", "") or "").strip() for c in cells):
-                continue
-            value = next((str(c.get("value", "") or "").strip()
-                          for c in cells
-                          if c.get("columnId") == jira_type_col), "")
-            is_child = bool(row.get("parentId"))
-            want = "Story" if is_child else "Epic"
-            where = f"row {row.get('rowNumber', '?')}"
-            if not value:
-                report.warn(f"{where}: JiraType is blank; the sheet's column "
-                            f"formulas key on it, so Story Points and Story "
-                            f"Count are wrong for this row")
-            elif value != want:
-                article = "an epic" if value == "Epic" else "a story"
-                mine = "a story" if is_child else "an epic"
-                report.error(
-                    f"{where}: JiraType is {value!r} but the row is "
-                    f"{'indented under an epic' if is_child else 'top-level'}, "
-                    f"so the tracker treats it as {article} while every "
-                    f"generator here treats it as {mine}. Story Points are "
-                    f"computed on the wrong branch.")
+    # The JiraType/hierarchy cross-check that lived here was removed on
+    # 2026-09-05. It existed because the sheet's column formulas branched on
+    # JiraType while every generator here branches on indentation, so a row
+    # where the two disagreed computed its numbers on one branch and drew on the
+    # other. Those formulas now branch on NumChildren, which IS the indentation -
+    # the two notions collapsed into one and the check had nothing left to
+    # compare. Keeping it would have started failing the moment JiraType is
+    # repurposed to a source column (Jama / Jira / GH), which is planned.
 
     # Hyperlinks and formulas.
     id2title = {c["id"]: c["title"] for c in sheet["columns"]}
     linked = unlinked = 0
-    formula_cols: dict[str, int] = {}
+    formula_cols: dict[str, str] = {}
     for row in sheet.get("rows", []):
         for cell in row.get("cells", []):
             title = id2title.get(cell.get("columnId"))
@@ -241,7 +220,7 @@ def check_structure(sheet: dict, schema: dict, sheet_name: str,
                 else:
                     unlinked += 1
             if cell.get("formula"):
-                formula_cols[title] = formula_cols.get(title, 0) + 1
+                formula_cols[title] = cell["formula"]
             if cell.get("errorCode") or (cell.get("error") or {}).get("code"):
                 report.error(f"cell error in column {title!r}: "
                              f"{cell.get('errorCode') or cell['error'].get('code')}")
@@ -260,9 +239,17 @@ def check_structure(sheet: dict, schema: dict, sheet_name: str,
     for col, formula in known_blocks.get(sheet_name, {}).items():
         if col.startswith("_"):
             continue                    # _comment and friends are prose, not columns
-        have = formula_cols.get(col, 0)
+        have = formula_cols.get(col, "")
         if not have:
             report.warn(f"column {col!r} has no formula; schema expects {formula}")
+        elif _norm_formula(have) != _norm_formula(formula):
+            # Presence was never the interesting question. A formula that is
+            # present but says something else is how ManDays came to compute on
+            # epic rows instead of story rows on 2026-09-05, while a
+            # presence-only check stayed silent. This is what "a future restore
+            # is mechanical" in the schema header actually requires.
+            report.warn(f"column {col!r} formula differs from the schema"
+                        f" - sheet has {have!r}, schema expects {formula!r}")
 
 
 def validate_source(label: str, rows: list[dict], vmodel: str,
