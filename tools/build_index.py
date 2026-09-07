@@ -34,6 +34,8 @@ sys.path.insert(0, _HERE)
 import teams as team_registry  # noqa: E402
 from build_dependency_dag import (  # noqa: E402
     COLUMN_ALIASES,
+    canonical_capability,
+    capability_aliases,
     drop_duplicate_epics,
     merge_capability_jama,
     parse_blockers,
@@ -332,7 +334,7 @@ def capability_rows(per_team: list[collections.Counter], meta: dict) -> str:
     in Jama - the single layer every team's tracker shares, and since the Jira
     Initiatives were retired the only place that layer exists as an item."""
     slugs = sorted(set().union(*per_team) if per_team else set(),
-                   key=lambda s: meta.get(s, {}).get("cap_id", "zz"))
+                   key=lambda s: (meta.get(s, {}).get("cap_id", "zz"), s))
     out = []
     for slug in slugs:
         info = meta.get(slug, {})
@@ -432,7 +434,7 @@ __CROSS_TEAM__
 the only layer the trackers share &mdash; no epic appears in two of them.</p>
 <div class="wrap">
 <table>
-  <thead><tr><th>PRD id</th><th>Capability</th>__TEAM_HEADS__<th>Jira parent</th></tr></thead>
+  <thead><tr><th>PRD id</th><th>Capability</th>__TEAM_HEADS__<th>Capability requirement</th></tr></thead>
   <tbody>
 __CAP_ROWS__
   </tbody>
@@ -478,6 +480,7 @@ def main() -> None:
     meta = load_json(team_registry.abspath(team_registry.CAPABILITY_META))
     meta = merge_capability_jama(
         meta, team_registry.abspath(team_registry.CAPABILITY_JAMA))
+    cap_aliases = capability_aliases(meta)
 
     cards, per_team, totals, names, pending = [], [], [], [], []
     loaded: dict[str, list[dict]] = {}
@@ -498,6 +501,15 @@ def main() -> None:
             pending.append(team["name"])
             continue
         rows = load_rows(path)
+        # A tracker may spell Capability as the capreq slug or as the Jama
+        # document key. The DAG canonicalises at load and this page must too:
+        # without it the capability table renders raw keys with no PRD id, no
+        # title and no link, which is exactly what it did for one run after the
+        # trackers switched spelling. Done here rather than in load_rows because
+        # that helper has no capability metadata to resolve against.
+        for row in rows:
+            row["Capability"] = canonical_capability(
+                row.get("Capability", ""), cap_aliases)
         loaded[team["name"]] = rows
         cards.append(team_card(team, rows))
         per_team.append(collections.Counter(
