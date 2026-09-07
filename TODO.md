@@ -4,25 +4,25 @@ Task list for `prak-sysreq-mgmt` (`pjm-autonomous/prak-sysreq-mgmt`). Paths are
 relative to the repo root. The sibling `prak-v-model` keeps its own `TODO.md`;
 items that cross the two name the other side explicitly.
 
-Status: **In-Progress** — tooling complete, decomposition ~60% evaluated.
+Status: **In-Progress** — tooling complete and Jira-independent; decomposition ~71% evaluated.
 Owner: Patrick McKee
 Role: SE for VSP-Embedded and Electronics
-Updated: 2026-09-02
+Updated: 2026-09-06
 
 ## Where this stands
 
-The generator, the DAGs, the published site, and the agendas are done. What is outstanding is **data**, not code: 102 epics are loaded and grouped across the two live teams, 62 of them evaluated, and only 11 rows carry a dependency.
+The generator, the DAGs, the published site, and the agendas are done, and as of 2026-09-06 the build no longer depends on any Jira layer. What is outstanding is **data**, not code: 110 epics are loaded and grouped across the two live teams, 78 of them evaluated, and 14 rows carry a dependency.
 Three more teams — ODOA, GNC, Mobius — are registered containers with nothing in them yet.
 
-Embedded's tracker of record is `Embedded-Core Epic Decomp`, which we own; it carries 187 story rows indented under 46 of its 87 epics, which the generators skip. The old flat sheet is `archived-prak-embedded-core-epics` and is the basis for the template ODOA, GNC and Mobius will onboard from.
+Embedded's tracker of record is `Embedded-Core Epic Decomp`, which we own; it carries 369 story rows indented under most of its 95 epics, which the generators skip. The old flat sheet is `archived-prak-embedded-core-epics` and is the basis for the template ODOA, GNC and Mobius will onboard from.
 
 | | Embedded-Core | Electronics | ODOA | GNC | Mobius |
 |---|---:|---:|---:|---:|---:|
-| Epics | 87 | 15 | — | — | — |
+| Epics | 95 | 15 | — | — | — |
 | Capabilities | 9 | 4 | — | — | — |
-| Evaluated (`2TS Required` set) | 47 | 15 | — | — | — |
-| Rows with dependencies recorded | 2 | 9, all provisional | — | — | — |
-| Story rows | 187 | — | — | — | — |
+| Evaluated (`2TS Required` set) | 63 | 15 | — | — | — |
+| Rows with dependencies recorded | 5 | 9, all provisional | — | — | — |
+| Story rows | 369 | — | — | — | — |
 | Tracker | live (`Embedded-Core Epic Decomp`, we own it) | live (`prak-electronics-epics`) | none | none | none |
 | Jira project | `MCHTRNCS` | `ET` | `ODOA` | `GNC` | `MP` |
 
@@ -47,19 +47,45 @@ Published: https://pjm-autonomous.github.io/prak-sysreq-mgmt/ (rebuilds on push)
 - **Hidden-column question settled by test:** CSV and Excel exports carry hidden columns; only PDF drops them. The `Epic` column being hidden is therefore harmless to the build. Validator reports it as maintenance hygiene, not risk.
 - **Two Smartsheet accounts found**, which is what made a working sheet id look wrong - see *Re-authorize the Smartsheet connector* below.
 
+### Changed 2026-09-06
+
+The Jira retirement landed end to end and the refresh workflow was exercised
+three times against live data. Six commits plus two CI refreshes; see
+`## Jira retirement` below for the substance.
+
+- Capability links repointed **Jira Initiative -> Jama**, all 15 capabilities
+  carrying both `jama_key` and `item_id`. `capability-jira.json` deleted.
+- `Jira Key` moved to `OPTIONAL_COLS`; a tracker with no such column now builds.
+- Tracker `Capability` switched to Jama document keys upstream; both spellings
+  canonicalise to the capreq slug at load. Caught before publishing: with keys
+  in the column, 97/97 rows failed validation and all 9 tiles rendered raw keys.
+- Sheet formulas re-keyed off `JiraType` onto `NumChildren`, so the sheet and the
+  generators now share one notion of epic-vs-story. `JiraType` is free to become
+  a source column (Jama / Jira / GH).
+- `validate_tracker --live` now compares formula **text**, not just presence.
+- Four columns deleted from the tracker (`Epic Total (days)`, `Story Titles`,
+  `2TS Rank`, `Story Count`); `Epic` retained — it is the id everything resolves
+  against and deleting it takes the build down.
+- Duplicate `Epic` ids are now named and dropped rather than silently taking a
+  graph node. Fixed a case where `MCHTRNCS-271` had vanished from the published
+  DAG while the header counted one epic more than the graph could hold.
+- Ownership record corrected: we are **Owner** of the Embedded tracker and hold
+  Admin. Two standing "ask David" items were fiction and are closed.
+
+**Three self-inflicted bugs, all caught and fixed:** deleted `RETRY_*` constants
+(function-boundary editing) failed the first CI run; `build_index` never
+canonicalised `Capability` and published nine broken rows; its capability table
+row order was non-deterministic. The last two were found only by rebuilding
+locally and diffing against what CI had just committed — worth keeping as the
+acceptance check for this repo.
+
 ### Next session
 
-1. **Make the two Smartsheet column changes** on `Embedded-Core Epic Decomp`.  
-  We hold Admin, so neither needs anyone else:
-   - Rename `Time per Story (points)` -> `Story Points`.
-   - Put `=SUM(CHILDREN())` in the **Story Points cell of each epic row that has    children** (46 of 87). It must be a *cell* formula, not a column formula - Smartsheet column formulas apply to every row and would overwrite each story's hand-entered estimate. Epics with no children stay blank.
-  Do this from the browser, or from Claude *after* the connector is re-authorized. Not before: the current grant is the dead `patrick.mckee-cn47` account, and writing through it stamps that identity
-   into the sheet's cell history.
-2. **Re-authorize the Smartsheet connector onto `c00236`.** Full procedure in [CREDENTIALS.md](CREDENTIALS.md). The grant is currently on `patrick.mckee-cn47@contractor.asirobots.com`, which reads `Embedded-Core Epic Decomp` (it still holds Admin there) and 403s on `prak-electronics-epics`, `prak-TEMPLATE-epics` and the archived sheet. That asymmetry reads exactly like a wrong sheet id and cost a full verification pass to diagnose. Remove `patrick.mckee-cn47` from the sheet's share list only *after* the new grant is confirmed working.
-3. Confirm the 9 provisional `[guess]` Electronics dependencies, or run the first Electronics evaluation meeting, whichever comes first.
-4. After any meeting: export the sheet to CSV, then `python3 tools/build_dependency_dag.py --team <t> --csv <export>` and `python3 tools/build_index.py`, commit, push. The site updates itself.
-5. If IT ticket #help00004986 has landed, mint the Smartsheet personal API token **under `c00236@contractor.asirobots.com`**, set `SMARTSHEET_ACCESS_TOKEN` locally for `--live`, and add it as a repo secret so `.github/workflows/refresh-dag.yml` (already committed, cron three times each weekday, 07:00 / 12:00 / 17:00 Mountain) stops failing on its token check. Minting it under the old account would reproduce the connector problem in CI.
-6. **Verify Michael Anderson can actually edit the tracker.** The Embedded agenda names him Responsible for estimates and story breakdown, but the sheet's item-level share list is only David Hayes, us, and the dead account. He may hold access through the `prak-sysreq-decomposition` workspace - the API's item-scope list would not show that. Confirm before the next meeting.
+1. **Re-authorize the Smartsheet connector onto `c00236`.** Full procedure in [CREDENTIALS.md](CREDENTIALS.md). The grant is currently on `patrick.mckee-cn47@contractor.asirobots.com`, which reads `Embedded-Core Epic Decomp` (it still holds Admin there) and 403s on `prak-electronics-epics`, `prak-TEMPLATE-epics` and the archived sheet. That asymmetry reads exactly like a wrong sheet id and cost a full verification pass to diagnose. Remove `patrick.mckee-cn47` from the sheet's share list only *after* the new grant is confirmed working.
+2. Confirm the 9 provisional `[guess]` Electronics dependencies, or run the first Electronics evaluation meeting, whichever comes first.
+3. After any meeting, the scheduled refresh picks the change up on its own - `SMARTSHEET_ACCESS_TOKEN` is live in CI and was exercised three times on 2026-09-06, pulling 95 Embedded and 15 Electronics epics and committing the snapshots. To pull immediately rather than wait for the cron: `gh workflow run "Refresh dependency DAGs"`. The offline CSV route still works if the sheet is unreachable.
+4. Set `SMARTSHEET_ACCESS_TOKEN` in the **local** shell. The repo secret is done; only this machine lacks it, which is why every local check this session ran against the committed snapshot instead of the live sheet, and why the live code path reached CI untested. Mint it under `c00236@contractor.asirobots.com` - not the dead `patrick.mckee-cn47`.
+5. **Verify Michael Anderson can actually edit the tracker.** The Embedded agenda names him Responsible for estimates and story breakdown, but the sheet's item-level share list is only David Hayes, us, and the dead account. He may hold access through the `prak-sysreq-decomposition` workspace - the API's item-scope list would not show that. Confirm before the next meeting.
 
 ## Fixed 2026-08-26: the offline refresh never wrote a snapshot
 
@@ -202,15 +228,10 @@ all — it stays at the System Requirement level, which is what it already was.
 
 ### Open
 
-- [ ] **Fill in the `item_id` for each capability** in
-      `data/shared/capability-jama.json` — the numeric id from the Jama URL
-      (`.../perspective.req#/items/7466995?projectId=156` -> `7466995`). The 9
-      `jama_key` values are already recorded, derived by joining the live
-      Capability column against the committed snapshot with zero ambiguity.
-      Every build names the slugs still missing one. Until then the tiles render
-      the `CAP-nn` chip with no link — which is correct, since the Jira link they
-      used to carry is dead. Obtainable via jama-mcp (Claude desktop app; the
-      Claude Code extension does not have it).
+- [x] ~~**Fill in the `item_id` for each capability**~~ Done 2026-09-06: all 15
+      capabilities carry both a `jama_key` and an `item_id`, all unique, and no
+      build emits the unlinked-capability note. `url_template` carries the host
+      and `?projectId=156`, so a Jama move is a one-line edit.
 - [ ] **Add `jama-id` to capreq frontmatter upstream**, then delete
       `capability-jama.json` — the reader already prefers frontmatter, so this is
       a data change with no code change. Same retirement path the Jira map took.
@@ -221,14 +242,35 @@ all — it stays at the System Requirement level, which is what it already was.
       whether epic rows keep a key at all, or the column becomes purely
       informational.
 - [ ] **Decide what happens to the tracker's story rows.** Once Jama is
-      authoritative for stories, the tracker's 375 child rows and Jama's User
+      authoritative for stories, the tracker's 369 child rows and Jama's User
       Stories both claim to be "the stories for this sysreq", with no sync
       between them. They are not inert: they drive `Duration` -> `Story Points`
       -> the epic roll-up.
-- [ ] **Re-key the sheet formulas off `JiraType`.** `Story Points` and `ManDays`
-      branch on `JiraType@row = "Epic"`, an issue type that will not exist.
-      `NumChildren@row > 0` is structural and says the same thing.
+- [x] ~~**Re-key the sheet formulas off `JiraType`.**~~ Done 2026-09-05. Both
+      `Story Points` and `ManDays` now branch on `NumChildren`, which IS the
+      indentation — so the sheet and every generator decide epic-vs-story the
+      same way and the two-notions hazard is gone rather than managed. The
+      `JiraType`/hierarchy cross-check in `validate_tracker` was retired with
+      it; a formula-text comparison replaced it.
+- [ ] **Repurposing `JiraType` to a source column** (Jama / Jira / GH) is now
+      safe from the formulas' point of view — nothing branches on it. Note the
+      column still carries a `[Epic, Story]` picklist and a stale description
+      ("Should be Epic for every row"); both need updating when it changes
+      meaning.
+- [ ] **Stale column descriptions on the tracker.** `Story Points` still reads
+      "blanket estimate per story, in days" — it is now a locked derived column.
+      Cosmetic, but it is what the next person reads.
 
+
+## Pending upstream in prak-v-model
+
+- [ ] **Five tracker epics have no matching `sysreq-*.md`** in `prak-v-model`:
+      `epic-latch-state`, `epic-continuously-eval-conditions`,
+      `epic-reject-unauth-recovery-request`, `epic-eval-before-resume`,
+      `epic-retain-last-valid-map`. Added to the tracker and to Jama ahead of the
+      upstream merge, deliberately. Nothing breaks — no tool validates epic slugs
+      against sysreq files — but the 1:1 mapping the Jira retirement rests on is
+      incomplete until they land. 2-3 more are expected.
 
 ## ODOA / GNC / Mobius - registered, not onboarded
 
@@ -305,7 +347,14 @@ for context and excluded from the referencing team's counts.
 
 ## Blocked on access
 
-- [ ] **Smartsheet API token.** Patrick's permission level excludes API keys. IT ticket **#help00004986**, submitted 2026-08-18. Until it lands, `--live` and `tools/export_snapshot.py` cannot run, and the scheduled refresh workflow cannot work even once it is committed. **Working path meanwhile:** in Smartsheet, File > Export > Export to CSV, then rebuild from the export: ```bash python3 tools/build_dependency_dag.py --team electronics --csv path/to/export.csv python3 tools/build_index.py ``` Committing the refreshed `data/<team>/tracker-snapshot.csv` keeps the published site current, since Pages rebuilds on every push. Ask IT for: a Smartsheet API access token (Personal Settings > API Access) with read on sheets `7348278000570244` and `2558444740497284`, issued under **`c00236@contractor.asirobots.com`**.
+- [x] ~~**Smartsheet API token.**~~ Resolved. IT ticket #help00004986 landed and
+      `SMARTSHEET_ACCESS_TOKEN` is set as a repo secret — confirmed working
+      2026-09-06 by three `workflow_dispatch` runs that pulled 95 Embedded and 15
+      Electronics epics live and committed the refreshed snapshots. **Still not
+      set in the local shell**, so `--live` and `tools/export_snapshot.py` do not
+      run from this machine; local verification uses the committed snapshot. Mint
+      the local copy under `c00236@contractor.asirobots.com` (Personal Settings >
+      API Access), read on sheets `7348278000570244` and `2558444740497284`.
 - [x] ~~**GitHub Actions workflow creation.**~~ Resolved: the `workflow` OAuth scope was granted and `.github/workflows/refresh-dag.yml` is committed and tracked. It still needs `SMARTSHEET_ACCESS_TOKEN` as a repo secret to do anything - see the entry above.
 
 ## Publishing

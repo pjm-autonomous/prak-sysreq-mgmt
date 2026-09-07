@@ -11,7 +11,7 @@ layer. Each team owns a container - `data/<slug>/` for its snapshot,
 
 | Team | Slug | Epics | Jira | Tracker of record |
 |------|------|------:|------|-------------------|
-| Embedded-Core | `embedded` | 87 | project `MCHTRNCS`, team VSP-Embedded | `Embedded-Core Epic Decomp`, sheet `7348278000570244` |
+| Embedded-Core | `embedded` | 95 | project `MCHTRNCS`, team VSP-Embedded | `Embedded-Core Epic Decomp`, sheet `7348278000570244` |
 | Electronics | `electronics` | 15 | project `ET`, team Electrical Platform | `prak-electronics-epics`, sheet `2558444740497284` |
 | ODOA | `odoa` | - | project `ODOA`, ODOA Platform | none yet |
 | GNC | `gnc` | - | project `GNC`, GNC Platform | none yet |
@@ -24,7 +24,7 @@ generator keys off - they print a note and skip rather than failing. Set a real
 sheet id and `refresh: True` when the tracker goes live.
 
 **The two live trackers are not the same shape.** Embedded is hierarchical:
-87 epic rows with 187 story rows indented beneath 46 of them. Electronics is
+95 epic rows with 369 story rows indented beneath most of them. Electronics is
 flat - 15 epic rows, no children. Both are valid; the generators read epics
 only and skip child rows structurally (see the `parentId` guard in
 `load_live`). ODOA, GNC and Mobius onboard from **`prak-TEMPLATE-epics`**
@@ -173,7 +173,7 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
   They are skipped structurally: `load_live` drops any row with a `parentId`,
   and `load_csv` (which has no hierarchy to read) drops any `Epic` id that is
   not a slug. Relying on the child's `Epic` cell being blank was a convention,
-  not a rule - the Embedded tracker has 187 story rows, and one stray id would
+  not a rule - the Embedded tracker has 369 story rows, and one stray id would
   have drawn a story as an epic.
 - **`Eval Status`** is optional and read for display only - never for an edge, a
   count, or a grouping. `Estimated` draws a green outline on the graph node and a
@@ -275,7 +275,7 @@ The Embedded tracker of record consolidated on 2026-08-31 onto
 and he granted us Admin on 2026-08-31. Column structure is writable, not just
 cell values, so nothing on this sheet is blocked on someone else's permission.
 
-Embedded-Core and Electronics are live: 102 epics, 62 evaluated, with the first blockers
+Embedded-Core and Electronics are live: 110 epics, 78 evaluated, with the first blockers
 recorded (Embedded 2 hard edges; Electronics 1 hard + 8 soft, 9 of them still
 `[guess]`). Only 11 rows carry a `Blocking Issues` value because the evaluation
 meetings have not all happened yet. `dependency-dag.example.*` shows what a fully

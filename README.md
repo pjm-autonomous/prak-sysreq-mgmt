@@ -15,11 +15,11 @@ Do not hand-edit a tracker snapshot; the scheduled refresh overwrites it.
 
 ## Project status
 
-**In progress — tooling complete, decomposition ongoing.** Last updated 2026-08-31.
+**In progress — tooling complete, decomposition ongoing.** Last updated 2026-09-06.
 
 | | State |
 |---|---|
-| Live teams | Embedded-Core (87 epics), Electronics (15) — 62 evaluated, 11 with dependencies |
+| Live teams | Embedded-Core (95 epics), Electronics (15) — 78 evaluated, 14 with dependencies |
 | Registered, not onboarded | ODOA, GNC, Mobius — containers only; onboard from `prak-TEMPLATE-epics` (`4956716494966660`) |
 | Published site | <https://pjm-autonomous.github.io/prak-sysreq-mgmt/>, rebuilt on push |
 | Scheduled refresh | Three times each weekday, 07:00 / 12:00 / 17:00 Mountain |
@@ -27,7 +27,7 @@ Do not hand-edit a tracker snapshot; the scheduled refresh overwrites it.
 
 The Embedded tracker of record is **`Embedded-Core Epic Decomp`**
 (`7348278000570244`, workspace `prak-sysreq-decomposition`). It is hierarchical —
-187 story rows indented under 46 of its 87 epics — and the generators read epics
+369 story rows indented under most of its 95 epics — and the generators read epics
 only. Electronics is flat. The previous Embedded sheet is archived as
 `archived-prak-embedded-core-epics` and becomes the basis for the simplified
 template ODOA, GNC and Mobius onboard from.
@@ -43,7 +43,7 @@ SEs without repo write.
 
 ## Embedded-Core Epic Dependency DAG
 
-A dependency graph of the 87 Embedded-Core (VSP-Embedded) PRAK epics, generated
+A dependency graph of the 95 Embedded-Core (VSP-Embedded) PRAK epics, generated
 **from the live Smartsheet tracker** so it re-populates whenever the sheet
 changes. Nothing here is hand-drawn — re-run the generator and the diagram
 reflects current sheet state.
@@ -72,7 +72,7 @@ Two sections, in this order:
 
 1. **Dependency graph** — one zoomable, pannable panel per dependency chain.
    Empty state until `Blocking Issues` is filled in.
-2. **Epic inventory** — a two-level drill-down, because 87 epic cards on one
+2. **Epic inventory** — a two-level drill-down, because 95 epic cards on one
    screen is a wall of rows nobody reads:
    - **Level 1:** one clickable tile per **PRD capability**, labelled with its
      `CAP-nn` id, its title, epic count, priority mix, and 2TS count. Tiles are
@@ -98,7 +98,7 @@ for a capability's id, title and priority. Nothing about a
 capability is hand-maintained in this repo; `capability-meta.json` is a
 write-through cache, not an input.
 
-All 87 epics are mapped to one of 9 capabilities; there is no unassigned group.
+All 95 epics are mapped to one of 9 capabilities; there is no unassigned group.
 
 ### How it reads the sheet
 
@@ -320,7 +320,7 @@ One standing agenda per team, inside that team's container as
 
 | File | Meeting |
 | ------ | --------- |
-| [`agile-planning/embedded/standingagenda.*`](agile-planning/embedded/) | Embedded-Core, 87 epics, ~10 per session |
+| [`agile-planning/embedded/standingagenda.*`](agile-planning/embedded/) | Embedded-Core, 95 epics, ~10 per session |
 | [`agile-planning/electronics/standingagenda.*`](agile-planning/electronics/) | Electronics, 15 epics, ~8 per session, roles still TBD |
 
 ODOA, GNC, and Mobius have containers but no agenda yet — they have not been
@@ -329,3 +329,36 @@ onboarded.
 ## Open work
 
 See [TODO.md](TODO.md).
+
+## Changed 2026-09-06 — the Jira layers came out
+
+Jira Epics, Objectives and Initiatives are designated for removal: ASI DevOps
+syncs Jama `User Story` to Jira `Story` for sprint boards, and the relationship
+from a story up to the PRAK System Requirement it supports lives in Jama. Both
+Jira layers this repo referenced were affected — the Initiative behind each
+capability tile, and the Epic behind each tracker row's `Jira Key`.
+
+What changed, and what did not:
+
+- **Capability links go to Jama.** `capability-jira.json` is replaced by
+  [`data/shared/capability-jama.json`](data/shared/capability-jama.json), which
+  carries a `jama_key` (the document key the trackers now hold in `Capability`)
+  and an `item_id` (the numeric id for the link) for all 15 capabilities. The
+  9-of-15 split was a Jira artefact; Jama holds every capreq.
+- **`Jira Key` is no longer required.** It moved to `OPTIONAL_COLS`, and
+  `load_csv` materialises every column, so a tracker with no `Jira Key` column
+  at all builds — verified. The build is decoupled from the Jira deletion date.
+- **The DAG did not change altitude.** Its nodes are still System Requirements.
+  All 95 Embedded and 15 Electronics tracker rows map 1:1 to a `sysreq-*.md` in
+  `prak-v-model`, with `parent-capability-requirement` and `priority` agreeing on
+  every one — measured, 0 disagreements. Five pending sysreqs are not upstream
+  yet, which is the only gap.
+
+The tracker's `Capability` column now holds a Jama document key rather than a
+capreq slug. Both spellings are accepted and canonicalised to the slug at load,
+so old snapshots and hand exports keep working.
+
+Estimation also moved: `Story Points` is a locked, derived column
+(`=IF(NumChildren@row > 0, SUM(CHILDREN()), ROUNDUP(Duration@row / 2))`). The
+meeting's input is **`Duration` in days on story rows**; keep it on 2/3/5/10,
+which map exactly to 1/2/3/5 points.
