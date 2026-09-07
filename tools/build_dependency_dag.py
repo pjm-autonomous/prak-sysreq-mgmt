@@ -303,6 +303,20 @@ def canonical_capability(value: str, aliases: dict) -> str:
     """
     return aliases.get(value.strip().casefold(), value)
 
+# --------------------------------------------------------------------------- #
+# Data loading
+# --------------------------------------------------------------------------- #
+# Statuses worth a second attempt. 429 and 5xx are the textbook transients.
+# 403 is here on evidence, not principle: on 2026-08-27, immediately after a
+# Smartsheet account reconfiguration, a sheet returned 403 errorCode 4003
+# "Access Denied" once and then served the same request twice in a row. A real
+# permission failure still fails - just a few seconds later, having said so on
+# stderr each time - and the scheduled refresh is worth more than that delay.
+RETRY_STATUS = frozenset({403, 429, 500, 502, 503, 504})
+RETRY_ATTEMPTS = 4
+RETRY_BACKOFF = 2.0          # seconds, doubled after each failed attempt
+
+
 def smartsheet_get(path: str, token: str, timeout: int = 60) -> dict:
     """GET one Smartsheet API path, retrying transient failures.
 
