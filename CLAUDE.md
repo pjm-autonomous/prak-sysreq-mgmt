@@ -200,9 +200,10 @@ weekday (07:00 / 12:00 / 17:00 Mountain) and commits any change.
   sheet's own column formulas via `NumChildren`. They briefly branched on the
   `JiraType` cell instead, which meant a row could compute its numbers on one
   branch while the graph drew it on the other, silently. Keep any new formula
-  on `NumChildren` - and note the sense flips: an epic is `NumChildren > 0`, a
-  story is `NumChildren = 0`. Getting that backwards is what put `ManDays` on
-  the 97 epic rows and left all 375 story rows blank.
+  on `NumChildren`: an epic is `NumChildren > 0`, a story is `NumChildren = 0`.
+  Both `Story Points` and `ManDays` are epic-level, so both test `> 0` -
+  `ManDays` is working days to implement the whole system requirement, not a
+  per-story figure.
 - **`validate_tracker --live` compares formula TEXT, not just presence.** A
   column that has *a* formula which says the wrong thing is the failure that
   actually happens; presence was never the interesting question.
