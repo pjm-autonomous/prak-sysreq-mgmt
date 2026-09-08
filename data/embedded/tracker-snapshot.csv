@@ -1,5 +1,5 @@
 Epic,Jira Key,Title,Capability,Baseline Priority,2TS Required,Blocking Issues,Eval Status
-epic-accept-manual-request,MCHTRNCS-277,Accept Manual Off-load Request,PLAT3-PRD_Rqmts-4268,Could Have,TBD,,Not Started
+epic-accept-manual-request,MCHTRNCS-277,Accept Manual Off-load Request,PLAT3-PRD_Rqmts-4268,Could Have,Yes,,Estimated
 epic-active-stop-mode-query,MCHTRNCS-219,Active Stop Mode Query Interface,PLAT3-PRD_Rqmts-4272,Should Have,Yes,,Estimated
 epic-all-stop-continuous-monitor,MCHTRNCS-220,All Stop Continuous Communication Monitor,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
 epic-all-stop-failed-event-fault-log,MCHTRNCS-226,Fault Log on Failed All Stop Event Publish,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
@@ -77,9 +77,9 @@ epic-stop-on-heading-overshoot,MCHTRNCS-206,Stop on Heading Overshoot During Tur
 epic-stop-on-path-deviation,MCHTRNCS-207,Stop on Path Deviation (GeoFence),PLAT3-PRD_Rqmts-4271,Must Have,Yes,MP-4575,Estimated
 epic-structured-map-conformance,MCHTRNCS-197,Conform to Structured-Map Rules During Execution,PLAT3-PRD_Rqmts-4271,Should Have,Yes,,Estimated
 epic-subscribe-all-stop-broadcaster,MCHTRNCS-234,Subscribe to All Stop Broadcaster,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
-epic-support-acumen-vehicles,MCHTRNCS-240,Support Acumen Vehicles,PLAT3-PRD_Rqmts-4273,Should Have,TBD,,Not Started
-epic-support-articulated-vehicles,MCHTRNCS-241,Support Articulated Vehicles,PLAT3-PRD_Rqmts-4273,Should Have,TBD,,Not Started
-epic-support-differential-drive-vehicles,MCHTRNCS-242,Support Differential-Drive Vehicles,PLAT3-PRD_Rqmts-4273,Should Have,TBD,,Not Started
+epic-support-acumen-vehicles,MCHTRNCS-240,Support Acumen Vehicles,PLAT3-PRD_Rqmts-4273,Should Have,No,,Estimated
+epic-support-articulated-vehicles,MCHTRNCS-241,Support Articulated Vehicles,PLAT3-PRD_Rqmts-4273,Should Have,No,,Estimated
+epic-support-differential-drive-vehicles,MCHTRNCS-242,Support Differential-Drive Vehicles,PLAT3-PRD_Rqmts-4273,Should Have,Yes,,Estimated
 epic-tele-op-command-authorization-within-limits,MCHTRNCS-302,Tele-op Command Authorization Within Limits,PLAT3-PRD_Rqmts-4275,Must Have,Yes,,Estimated
 epic-tele-op-control-command-latency,MCHTRNCS-303,Tele-op Control Command Latency,PLAT3-PRD_Rqmts-4275,Should Have,Yes,,Estimated
 epic-tele-op-exclusive-control,MCHTRNCS-304,Tele-op Exclusive Control,PLAT3-PRD_Rqmts-4275,Must Have,Yes,,Estimated
