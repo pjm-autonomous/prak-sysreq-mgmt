@@ -39,7 +39,7 @@ epic-gather-selected-windows,MCHTRNCS-286,Gather Only Selected Windows,PLAT3-PRD
 epic-geofence-map-validation,MCHTRNCS-270,Geofence Map Validation,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
 epic-immediate-stop-on-stop-command,MCHTRNCS-276,Immediate Stop on Stop Command,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
 epic-ingest-placement-and-enable,MCHTRNCS-287,"Ingest Placement, Address, and Enable from C2",PLAT3-PRD_Rqmts-4268,Should Have,TBD,,Not Started
-epic-integrable-framework-for-oem-vehicle-platforms,MCHTRNCS-300,Integrable Framework for OEM Vehicle Platforms,PLAT3-PRD_Rqmts-4274,Should Have,TBD,,Not Started
+epic-integrable-framework-for-oem-vehicle-platforms,MCHTRNCS-300,Integrable Framework for OEM Vehicle Platforms,PLAT3-PRD_Rqmts-4274,Should Have,Yes,,Estimated
 epic-latch-state,MCHTRNCS-329,Latch the Withheld State,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
 epic-merge-time-synchronized,MCHTRNCS-288,Merge into a Time-Synchronized Self-Contained Set,PLAT3-PRD_Rqmts-4268,Should Have,TBD,,Not Started
 epic-no-comm-loss-during-startup,MCHTRNCS-227,No Communication-Loss Declaration During Startup,PLAT3-PRD_Rqmts-4272,Should Have,Yes,,Estimated
@@ -52,7 +52,7 @@ epic-preserve-serialization,MCHTRNCS-289,Preserve Serialization and Native Forma
 epic-priority-ordering,MCHTRNCS-290,Priority Ordering of Off-load and Eviction,PLAT3-PRD_Rqmts-4268,Should Have,TBD,,Not Started
 epic-prohibited-transition-guard,MCHTRNCS-203,Guard Against Prohibited Motion Transitions,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
 epic-provide-gate-criteria,MCHTRNCS-291,Provide Readiness Gate Criteria,PLAT3-PRD_Rqmts-4268,Should Have,TBD,,Not Started
-epic-publish-framework-distribution-forms,MCHTRNCS-218,Publish Framework Distribution Forms and Interface Contracts,PLAT3-PRD_Rqmts-4274,Should Have,TBD,,Not Started
+epic-publish-framework-distribution-forms,MCHTRNCS-218,Publish Framework Distribution Forms and Interface Contracts,PLAT3-PRD_Rqmts-4274,Should Have,Yes,,Estimated
 epic-reject-all-stop-init-when-remote-stop,MCHTRNCS-228,Reject All Stop Initialization When Remote Stop Active,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
 epic-reject-mission-without-geofence-map,MCHTRNCS-325,Reject a Mission or Path With No Valid Geofence Map,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
 epic-reject-remote-stop-init-when-all-stop,MCHTRNCS-229,Reject Remote Stop Initialization When All Stop Active,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
