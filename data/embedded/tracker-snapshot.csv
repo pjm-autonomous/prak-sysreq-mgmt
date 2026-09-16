@@ -14,7 +14,7 @@ epic-comm-loss-log,MCHTRNCS-225,Communication Loss Log,PLAT3-PRD_Rqmts-4272,Shou
 epic-configurable-kinematic-and-io-interfaces,MCHTRNCS-217,Configurable Kinematic Model and Actuator/Sensor Interfaces,PLAT3-PRD_Rqmts-4274,Should Have,Yes,,Estimated
 epic-confirm-estop-clear,MCHTRNCS-134,Confirm E-Stop State Clear,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
 epic-confirm-stop-capability,MCHTRNCS-139,Confirm Stop-Capability Operational,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
-epic-confirm-valid-path-plan-present,MCHTRNCS-135,Confirm Valid Path Plan Present (HPCU),PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
+epic-confirm-valid-path-plan-present,MCHTRNCS-135,Confirm Valid Path Plan Present (HPCU),PLAT3-PRD_Rqmts-4269,Must Have,No,,Estimated
 epic-consistent-runtime-icd,MCHTRNCS-299,Consistent Runtime ICD to Command and Control,PLAT3-PRD_Rqmts-4274,Should Have,Yes,,Estimated
 epic-continuous-geofence-enforcement,MCHTRNCS-269,Continuous Geofence Enforcement,PLAT3-PRD_Rqmts-4269,Must Have,Yes,MP-4575,Estimated
 epic-continuously-eval-conditions,MCHTRNCS-327,Re-evaluate Motion-Authorization Conditions Continuously,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
@@ -54,7 +54,7 @@ epic-prohibited-transition-guard,MCHTRNCS-203,Guard Against Prohibited Motion Tr
 epic-provide-gate-criteria,MCHTRNCS-291,Provide Readiness Gate Criteria,PLAT3-PRD_Rqmts-4268,Should Have,No,,Estimated
 epic-publish-framework-distribution-forms,MCHTRNCS-218,Publish Framework Distribution Forms and Interface Contracts,PLAT3-PRD_Rqmts-4274,Should Have,Yes,,Estimated
 epic-reject-all-stop-init-when-remote-stop,MCHTRNCS-228,Reject All Stop Initialization When Remote Stop Active,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
-epic-reject-mission-without-geofence-map,MCHTRNCS-325,Reject a Mission or Path With No Valid Geofence Map,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
+epic-reject-mission-without-geofence-map,MCHTRNCS-325,Reject a Mission or Path With No Valid Geofence Map,PLAT3-PRD_Rqmts-4269,Should Have,No,,Estimated
 epic-reject-remote-stop-init-when-all-stop,MCHTRNCS-229,Reject Remote Stop Initialization When All Stop Active,PLAT3-PRD_Rqmts-4272,Must Have,Yes,,Estimated
 epic-reject-unauth-recovery-request,MCHTRNCS-330,Reject an Unauthenticated or Malformed Recovery Request,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
 epic-release-queue-after-staging,MCHTRNCS-292,Release Queued State Once Staged,PLAT3-PRD_Rqmts-4268,Should Have,No,,Estimated
