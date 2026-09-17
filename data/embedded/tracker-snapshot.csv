@@ -43,11 +43,11 @@ epic-integrable-framework-for-oem-vehicle-platforms,MCHTRNCS-300,Integrable Fram
 epic-latch-state,MCHTRNCS-329,Latch the Withheld State,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
 epic-merge-time-synchronized,MCHTRNCS-288,Merge into a Time-Synchronized Self-Contained Set,PLAT3-PRD_Rqmts-4268,Should Have,No,,Estimated
 epic-no-comm-loss-during-startup,MCHTRNCS-227,No Communication-Loss Declaration During Startup,PLAT3-PRD_Rqmts-4272,Should Have,Yes,,Estimated
-epic-objective-mission-cancel-response,MCHTRNCS-334,Objective Mission Cancel Command Response,PLAT3-PRD_Rqmts-4271,Must Have,Yes,PAT-413,Estimated
+epic-objective-mission-cancel-response,MCHTRNCS-334,Objective Mission Cancel Command Response,PLAT3-PRD_Rqmts-4271,Should Have,Yes,PAT-413,Estimated
 epic-objective-progress-updates,MCHTRNCS-272,Objective Progress Updates,PLAT3-PRD_Rqmts-4271,Should Have,Yes,,Estimated
 epic-objectives-reception,MCHTRNCS-273,Objectives Reception,PLAT3-PRD_Rqmts-4271,Should Have,Yes,"PAT-413, MP-4575",Estimated
 epic-one-active-stop-mode,MCHTRNCS-230,Single Active Stop Mode,PLAT3-PRD_Rqmts-4272,Should Have,Yes,,Estimated
-epic-path-execution-cancel-response,MCHTRNCS-271,Path Execution Mission Cancel Command Response,PLAT3-PRD_Rqmts-4271,Must Have,Yes,,Estimated
+epic-path-execution-cancel-response,MCHTRNCS-271,Path Execution Mission Cancel Command Response,PLAT3-PRD_Rqmts-4271,Should Have,Yes,,Estimated
 epic-preserve-serialization,MCHTRNCS-289,Preserve Serialization and Native Formats,PLAT3-PRD_Rqmts-4268,Should Have,No,,Estimated
 epic-priority-ordering,MCHTRNCS-290,Priority Ordering of Off-load and Eviction,PLAT3-PRD_Rqmts-4268,Should Have,No,,Estimated
 epic-prohibited-transition-guard,MCHTRNCS-203,Guard Against Prohibited Motion Transitions,PLAT3-PRD_Rqmts-4269,Must Have,Yes,,Estimated
